@@ -1,12 +1,12 @@
 .PHONY: docker
 # generate docker
 docker:
-	find app -mindepth 3 -maxdepth 3 -type d -print | xargs -L 1 bash -c 'cd "$$0" && pwd && $(MAKE) docker'
+	find app -mindepth 3 -maxdepth 3 -type d -print | sort | xargs -L 1 bash -c 'cd "$$0" && pwd && $(MAKE) docker'
 
 .PHONY: buildx
 # generate buildx
 buildx:
-	find app -mindepth 3 -maxdepth 3 -type d -print | xargs -L 1 bash -c 'cd "$$0" && pwd && $(MAKE) buildx'
+	find app -mindepth 3 -maxdepth 3 -type d -print | sort | xargs -L 1 bash -c 'cd "$$0" && pwd && $(MAKE) buildx'
 
 # show help
 help:

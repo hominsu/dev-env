@@ -22,14 +22,12 @@ ENV OPENCOREAMR_VERSION=0.1.5   \
     FONTCONFIG_VERSION=2.14.0   \
     LIBASS_VERSION=0.15.2       \
     KVAZAAR_VERSION=2.1.0       \
-    AOM_VERSION=master          \
+    AOM_VERSION=master
 
-    SRC=/usr/local
-
-RUN apk add --update autoconf automake bash binutils bzip2 cmake \
-    curl coreutils diffutils expat-dev file g++ gcc gperf libtool \
-    make openssl-dev tar yasm zlib-dev libgcc libstdc++ \
-    ca-certificates libcrypto1.1 libssl1.1
+RUN apk add --update --no-cache autoconf automake bash binutils bzip2 \
+    cmake curl coreutils diffutils expat-dev file g++ gcc gperf libtool \
+    make python3 openssl-dev libcrypto1.1 libssl1.1 tar yasm zlib-dev \
+    libgcc libstdc++ ca-certificates harfbuzz
 
 # opencore-amr https://sourceforge.net/projects/opencore-amr/
 RUN DIR=/tmp/opencore-amr && \
@@ -106,6 +104,9 @@ RUN DIR=/tmp/theora && \
     cd ${DIR} && \
     curl -sLO http://downloads.xiph.org/releases/theora/libtheora-${THEORA_VERSION}.tar.gz && \
     tar -zx --strip-components=1 -f libtheora-${THEORA_VERSION}.tar.gz && \
+    rm config.guess config.sub && \
+    wget -q -O config.guess 'https://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.guess;hb=HEAD' && \
+    wget -q -O config.sub 'https://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.sub;hb=HEAD' && \
     ./configure --prefix="${PREFIX}" --with-ogg="${PREFIX}" --enable-shared && \
     make -j $(nproc) && \
     make install && \
@@ -164,7 +165,7 @@ RUN DIR=/tmp/openjpeg && \
     cd ${DIR} && \
     curl -sL https://github.com/uclouvain/openjpeg/archive/v${OPENJPEG_VERSION}.tar.gz | \
     tar -zx --strip-components=1 && \
-    cmake -DBUILD_THIRDPARTY:BOOL=ON -DCMAKE_INSTALL_PREFIX="${PREFIX}" . && \
+    cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="${PREFIX}" . && \
     make -j $(nproc) && \
     make install && \
     rm -rf ${DIR}
@@ -197,9 +198,9 @@ RUN DIR=/tmp/fribidi && \
     cd ${DIR} && \
     curl -sLO https://github.com/fribidi/fribidi/archive/v${FRIBIDI_VERSION}.tar.gz && \
     tar -zx --strip-components=1 -f v${FRIBIDI_VERSION}.tar.gz && \
-    ./bootstrap --no-config && \
+    ./autogen.sh && \
     ./configure -prefix="${PREFIX}" --disable-static --enable-shared && \
-    make -j $(nproc) && \
+    make && \
     make install && \
     rm -rf ${DIR}
 
@@ -216,6 +217,7 @@ RUN DIR=/tmp/fontconfig && \
 
 # libass https://github.com/libass/libass
 RUN DIR=/tmp/libass && \
+    apk add --no-cache harfbuzz-dev && \
     mkdir -p ${DIR} && \
     cd ${DIR} && \
     curl -sLO https://github.com/libass/libass/archive/${LIBASS_VERSION}.tar.gz && \
@@ -224,7 +226,8 @@ RUN DIR=/tmp/libass && \
     ./configure -prefix="${PREFIX}" --disable-static --enable-shared && \
     make -j $(nproc) && \
     make install && \
-    rm -rf ${DIR}
+    rm -rf ${DIR} && \
+    apk del harfbuzz-dev
 
 # kvazaar https://github.com/ultravideo/kvazaar
 RUN DIR=/tmp/kvazaar && \
