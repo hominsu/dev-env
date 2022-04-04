@@ -30,9 +30,7 @@ RUN apk add --update --no-cache autoconf automake bash binutils bzip2 \
     libgcc libstdc++ ca-certificates harfbuzz
 
 # opencore-amr https://sourceforge.net/projects/opencore-amr/
-RUN DIR=/tmp/opencore-amr && \
-    mkdir -p ${DIR} && \
-    cd ${DIR} && \
+RUN DIR=$(mktemp -d) && cd ${DIR} && \
     curl -sL https://kent.dl.sourceforge.net/project/opencore-amr/opencore-amr/opencore-amr-${OPENCOREAMR_VERSION}.tar.gz | \
     tar -zx --strip-components=1 && \
     ./configure --prefix="${PREFIX}" --enable-shared  && \
@@ -41,9 +39,7 @@ RUN DIR=/tmp/opencore-amr && \
     rm -rf ${DIR}
 
 # x264 http://www.videolan.org/developers/x264.html
-RUN DIR=/tmp/x264 && \
-    mkdir -p ${DIR} && \
-    cd ${DIR} && \
+RUN DIR=$(mktemp -d) && cd ${DIR} && \
     curl -sL https://download.videolan.org/pub/videolan/x264/snapshots/x264-snapshot-${X264_VERSION}.tar.bz2 | \
     tar -jx --strip-components=1 && \
     ./configure --prefix="${PREFIX}" --enable-shared --enable-pic --disable-cli && \
@@ -52,12 +48,10 @@ RUN DIR=/tmp/x264 && \
     rm -rf ${DIR}
 
 # x265 http://x265.org/
-RUN DIR=/tmp/x265 && \
-    mkdir -p ${DIR} && \
-    cd ${DIR} && \
-    curl -sL https://download.videolan.org/pub/videolan/x265/x265_${X265_VERSION}.tar.gz  | \
-    tar -zx && \
-    cd x265_${X265_VERSION}/build/linux && \
+RUN DIR=$(mktemp -d) && cd ${DIR} && \
+    curl -sL https://download.videolan.org/pub/videolan/x265/x265_${X265_VERSION}.tar.gz | \
+    tar -zx --strip-components=1 && \
+    cd build/linux && \
     sed -i "/-DEXTRA_LIB/ s/$/ -DCMAKE_INSTALL_PREFIX=\${PREFIX}/" multilib.sh && \
     sed -i "/^cmake/ s/$/ -DENABLE_CLI=OFF/" multilib.sh && \
     ./multilib.sh && \
@@ -65,22 +59,18 @@ RUN DIR=/tmp/x265 && \
     rm -rf ${DIR}
 
 # libogg https://www.xiph.org/ogg/
-RUN DIR=/tmp/ogg && \
-    mkdir -p ${DIR} && \
-    cd ${DIR} && \
-    curl -sLO http://downloads.xiph.org/releases/ogg/libogg-${OGG_VERSION}.tar.gz && \
-    tar -zx --strip-components=1 -f libogg-${OGG_VERSION}.tar.gz && \
+RUN DIR=$(mktemp -d) && cd ${DIR} && \
+    curl -sL http://downloads.xiph.org/releases/ogg/libogg-${OGG_VERSION}.tar.gz | \
+    tar -zx --strip-components=1 && \
     ./configure --prefix="${PREFIX}" --enable-shared  && \
     make -j $(nproc) && \
     make install && \
     rm -rf ${DIR}
 
 # libopus https://www.opus-codec.org/
-RUN DIR=/tmp/opus && \
-    mkdir -p ${DIR} && \
-    cd ${DIR} && \
-    curl -sLO https://archive.mozilla.org/pub/opus/opus-${OPUS_VERSION}.tar.gz && \
-    tar -zx --strip-components=1 -f opus-${OPUS_VERSION}.tar.gz && \
+RUN DIR=$(mktemp -d) && cd ${DIR} && \
+    curl -sL https://archive.mozilla.org/pub/opus/opus-${OPUS_VERSION}.tar.gz | \
+    tar -zx --strip-components=1 && \
     autoreconf -fiv && \
     ./configure --prefix="${PREFIX}" --enable-shared && \
     make -j $(nproc) && \
@@ -88,22 +78,18 @@ RUN DIR=/tmp/opus && \
     rm -rf ${DIR}
 
 # libvorbis https://xiph.org/vorbis/
-RUN DIR=/tmp/vorbis && \
-    mkdir -p ${DIR} && \
-    cd ${DIR} && \
-    curl -sLO http://downloads.xiph.org/releases/vorbis/libvorbis-${VORBIS_VERSION}.tar.gz && \
-    tar -zx --strip-components=1 -f libvorbis-${VORBIS_VERSION}.tar.gz && \
+RUN DIR=$(mktemp -d) && cd ${DIR} && \
+    curl -sL http://downloads.xiph.org/releases/vorbis/libvorbis-${VORBIS_VERSION}.tar.gz | \
+    tar -zx --strip-components=1 && \
     ./configure --prefix="${PREFIX}" --with-ogg="${PREFIX}" --enable-shared && \
     make -j $(nproc) && \
     make install && \
     rm -rf ${DIR}
 
 # libtheora http://www.theora.org/
-RUN DIR=/tmp/theora && \
-    mkdir -p ${DIR} && \
-    cd ${DIR} && \
-    curl -sLO http://downloads.xiph.org/releases/theora/libtheora-${THEORA_VERSION}.tar.gz && \
-    tar -zx --strip-components=1 -f libtheora-${THEORA_VERSION}.tar.gz && \
+RUN DIR=$(mktemp -d) && cd ${DIR} && \
+    curl -sL http://downloads.xiph.org/releases/theora/libtheora-${THEORA_VERSION}.tar.gz | \
+    tar -zx --strip-components=1 && \
     rm config.guess config.sub && \
     wget -q -O config.guess 'https://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.guess;hb=HEAD' && \
     wget -q -O config.sub 'https://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.sub;hb=HEAD' && \
@@ -113,9 +99,7 @@ RUN DIR=/tmp/theora && \
     rm -rf ${DIR}
 
 # libvpx https://www.webmproject.org/code/
-RUN DIR=/tmp/vpx && \
-    mkdir -p ${DIR} && \
-    cd ${DIR} && \
+RUN DIR=$(mktemp -d) && cd ${DIR} && \
     curl -sL https://codeload.github.com/webmproject/libvpx/tar.gz/v${VPX_VERSION} | \
     tar -zx --strip-components=1 && \
     ./configure --prefix="${PREFIX}" --enable-vp8 --enable-vp9 --enable-pic --enable-shared \
@@ -125,9 +109,7 @@ RUN DIR=/tmp/vpx && \
     rm -rf ${DIR}
 
 # libmp3lame http://lame.sourceforge.net/
-RUN DIR=/tmp/lame && \
-    mkdir -p ${DIR} && \
-    cd ${DIR} && \
+RUN DIR=$(mktemp -d) && cd ${DIR} && \
     curl -sL https://kent.dl.sourceforge.net/project/lame/lame/$(echo ${LAME_VERSION} | sed -e 's/[^0-9]*\([0-9]*\)[.]\([0-9]*\)[.]\([0-9]*\)\([0-9A-Za-z-]*\)/\1.\2/')/lame-${LAME_VERSION}.tar.gz | \
     tar -zx --strip-components=1 && \
     ./configure --prefix="${PREFIX}" --bindir="${PREFIX}/bin" --enable-shared --enable-nasm --enable-pic --disable-frontend && \
@@ -136,21 +118,17 @@ RUN DIR=/tmp/lame && \
     rm -rf ${DIR}
 
 # xvid https://www.xvid.com/
-RUN DIR=/tmp/xvid && \
-    mkdir -p ${DIR} && \
-    cd ${DIR} && \
-    curl -sLO http://downloads.xvid.org/downloads/xvidcore-${XVID_VERSION}.tar.gz && \
-    tar -zx -f xvidcore-${XVID_VERSION}.tar.gz && \
-    cd xvidcore/build/generic && \
+RUN DIR=$(mktemp -d) && cd ${DIR} && \
+    curl -sL http://downloads.xvid.org/downloads/xvidcore-${XVID_VERSION}.tar.gz | \
+    tar -zx --strip-components=1 && \
+    cd build/generic && \
     ./configure --prefix="${PREFIX}" --bindir="${PREFIX}/bin" --datadir="${DIR}" --enable-shared --enable-shared && \
     make -j $(nproc) && \
     make install && \
     rm -rf ${DIR}
 
 # fdk-aac https://github.com/mstorsjo/fdk-aac
-RUN DIR=/tmp/fdk-aac && \
-    mkdir -p ${DIR} && \
-    cd ${DIR} && \
+RUN DIR=$(mktemp -d) && cd ${DIR} && \
     curl -sL https://github.com/mstorsjo/fdk-aac/archive/v${FDKAAC_VERSION}.tar.gz | \
     tar -zx --strip-components=1 && \
     autoreconf -fiv && \
@@ -160,9 +138,7 @@ RUN DIR=/tmp/fdk-aac && \
     rm -rf ${DIR}
 
 # openjpeg https://github.com/uclouvain/openjpeg
-RUN DIR=/tmp/openjpeg && \
-    mkdir -p ${DIR} && \
-    cd ${DIR} && \
+RUN DIR=$(mktemp -d) && cd ${DIR} && \
     curl -sL https://github.com/uclouvain/openjpeg/archive/v${OPENJPEG_VERSION}.tar.gz | \
     tar -zx --strip-components=1 && \
     cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="${PREFIX}" . && \
@@ -171,33 +147,27 @@ RUN DIR=/tmp/openjpeg && \
     rm -rf ${DIR}
 
 # freetype https://www.freetype.org/
-RUN DIR=/tmp/freetype && \
-    mkdir -p ${DIR} && \
-    cd ${DIR} && \
-    curl -sLO http://download.savannah.gnu.org/releases/freetype/freetype-${FREETYPE_VERSION}.tar.gz && \
-    tar -zx --strip-components=1 -f freetype-${FREETYPE_VERSION}.tar.gz && \
+RUN DIR=$(mktemp -d) && cd ${DIR} && \
+    curl -sL http://download.savannah.gnu.org/releases/freetype/freetype-${FREETYPE_VERSION}.tar.gz | \
+    tar -zx --strip-components=1 && \
     ./configure --prefix="${PREFIX}" --disable-static --enable-shared && \
     make -j $(nproc) && \
     make install && \
     rm -rf ${DIR}
 
 # libvstab https://github.com/georgmartius/vid.stab
-RUN  DIR=/tmp/vid.stab && \
-    mkdir -p ${DIR} && \
-    cd ${DIR} && \
-    curl -sLO https://github.com/georgmartius/vid.stab/archive/v${LIBVIDSTAB_VERSION}.tar.gz && \
-    tar -zx --strip-components=1 -f v${LIBVIDSTAB_VERSION}.tar.gz && \
+RUN DIR=$(mktemp -d) && cd ${DIR} && \
+    curl -sL https://github.com/georgmartius/vid.stab/archive/v${LIBVIDSTAB_VERSION}.tar.gz | \
+    tar -zx --strip-components=1 && \
     cmake -DCMAKE_INSTALL_PREFIX="${PREFIX}" . && \
     make -j $(nproc) && \
     make install && \
     rm -rf ${DIR}
 
 # fridibi https://www.fribidi.org/
-RUN DIR=/tmp/fribidi && \
-    mkdir -p ${DIR} && \
-    cd ${DIR} && \
-    curl -sLO https://github.com/fribidi/fribidi/archive/v${FRIBIDI_VERSION}.tar.gz && \
-    tar -zx --strip-components=1 -f v${FRIBIDI_VERSION}.tar.gz && \
+RUN DIR=$(mktemp -d) && cd ${DIR} && \
+    curl -sL https://github.com/fribidi/fribidi/archive/v${FRIBIDI_VERSION}.tar.gz | \
+    tar -zx --strip-components=1 && \
     ./autogen.sh && \
     ./configure -prefix="${PREFIX}" --disable-static --enable-shared && \
     make && \
@@ -205,45 +175,37 @@ RUN DIR=/tmp/fribidi && \
     rm -rf ${DIR}
 
 # fontconfig https://www.freedesktop.org/wiki/Software/fontconfig/
-RUN DIR=/tmp/fontconfig && \
-    mkdir -p ${DIR} && \
-    cd ${DIR} && \
-    curl -sLO https://www.freedesktop.org/software/fontconfig/release/fontconfig-${FONTCONFIG_VERSION}.tar.gz && \
-    tar -zx --strip-components=1 -f fontconfig-${FONTCONFIG_VERSION}.tar.gz && \
+RUN DIR=$(mktemp -d) && cd ${DIR} && \
+    curl -sL https://www.freedesktop.org/software/fontconfig/release/fontconfig-${FONTCONFIG_VERSION}.tar.gz | \
+    tar -zx --strip-components=1 && \
     ./configure -prefix="${PREFIX}" --disable-static --enable-shared && \
     make -j $(nproc) && \
     make install && \
     rm -rf ${DIR}
 
 # libass https://github.com/libass/libass
-RUN DIR=/tmp/libass && \
+RUN DIR=$(mktemp -d) && cd ${DIR} && \
     apk add --no-cache harfbuzz-dev && \
-    mkdir -p ${DIR} && \
-    cd ${DIR} && \
-    curl -sLO https://github.com/libass/libass/archive/${LIBASS_VERSION}.tar.gz && \
-    tar -zx --strip-components=1 -f ${LIBASS_VERSION}.tar.gz && \
+    curl -sL https://github.com/libass/libass/archive/${LIBASS_VERSION}.tar.gz | \
+    tar -zx --strip-components=1 && \
     ./autogen.sh && \
     ./configure -prefix="${PREFIX}" --disable-static --enable-shared && \
     make -j $(nproc) && \
     make install && \
-    rm -rf ${DIR} && \
-    apk del harfbuzz-dev
+    apk del harfbuzz-dev && \
+    rm -rf ${DIR}
 
 # kvazaar https://github.com/ultravideo/kvazaar
-RUN DIR=/tmp/kvazaar && \
-    mkdir -p ${DIR} && \
-    cd ${DIR} && \
-    curl -sLO https://github.com/ultravideo/kvazaar/archive/v${KVAZAAR_VERSION}.tar.gz && \
-    tar -zx --strip-components=1 -f v${KVAZAAR_VERSION}.tar.gz && \
+RUN DIR=$(mktemp -d) && cd ${DIR} && \
+    curl -sL https://github.com/ultravideo/kvazaar/archive/v${KVAZAAR_VERSION}.tar.gz | \
+    tar -zx --strip-components=1 && \
     ./autogen.sh && \
     ./configure -prefix="${PREFIX}" --disable-static --enable-shared && \
     make -j $(nproc) && \
     make install && \
     rm -rf ${DIR}
 
-RUN DIR=/tmp/aom && \
-    mkdir -p ${DIR} && \
-    cd ${DIR} && \
+RUN DIR=$(mktemp -d) && cd ${DIR} && \
     curl -sLO https://aomedia.googlesource.com/aom/+archive/${AOM_VERSION}.tar.gz && \
     tar -zx -f ${AOM_VERSION}.tar.gz && \
     rm -rf CMakeCache.txt CMakeFiles && \
@@ -253,3 +215,6 @@ RUN DIR=/tmp/aom && \
     make -j $(nproc) && \
     make install && \
     rm -rf ${DIR}
+
+RUN rm -rf /var/cache/apk/* && \
+    hash -r

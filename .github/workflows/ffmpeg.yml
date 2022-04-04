@@ -1,8 +1,10 @@
-name: Docker Deploy
+name: FFmpeg
 
 on:
   push:
     tags: [ '*.*.*' ]
+    paths:
+      - 'app/ffmpeg'
 
 jobs:
   set-matrix:
@@ -65,8 +67,7 @@ jobs:
 
       - name: Build and Push ${{ matrix.name }}
         run: |
-          make buildx REPO=${{ matrix.push_link }} VERSION=${{ needs.set-matrix.outputs.git_tag }}
-          make buildx REPO=${{ matrix.push_link }} VERSION=latest
+          make ffmpeg-buildx REPO=${{ matrix.push_link }} VERSION=${{ needs.set-matrix.outputs.git_tag }}
 
   deploy:
     name: Deploy

@@ -20,8 +20,8 @@ COPY --from=deps ${PREFIX}/include ${PREFIX}/include
 
 # ffmpeg https://ffmpeg.org/
 RUN DIR=$(mktemp -d) && cd ${DIR} && \
-    curl -sLO https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.bz2 && \
-    tar -jx --strip-components=1 -f ffmpeg-${FFMPEG_VERSION}.tar.bz2 && \
+    curl -sL https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.bz2 | \
+    tar -jx --strip-components=1 && \
     ./configure \
     --disable-debug \
     --disable-doc \
@@ -56,7 +56,8 @@ RUN DIR=$(mktemp -d) && cd ${DIR} && \
     --prefix="${PREFIX}" && \
     make -j $(nproc) && \
     make install && \
-    make distclean
+    make distclean && \
+    rm -rf ${DIR}
 
 RUN mkdir -p /tmp/fakeroot/lib  && \
     ldd ${PREFIX}/bin/ffmpeg | cut -d ' ' -f 3 | strings | xargs -I R cp R /tmp/fakeroot/lib/ && \
@@ -66,4 +67,6 @@ RUN mkdir -p /tmp/fakeroot/lib  && \
     cp -r ${PREFIX}/include /tmp/fakeroot/include && \
     LD_LIBRARY_PATH=/tmp/fakeroot/lib /tmp/fakeroot/bin/ffmpeg -buildconf
 
-RUN ls -la /tmp/fakeroot
+RUN ls -la /tmp/fakeroot && \
+    rm -rf /var/cache/apk/* && \
+    hash -r

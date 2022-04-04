@@ -20,6 +20,7 @@ ENV FFMPEG_CORE="bash \
                  libcrypto1.1 \
                  libssl1.1 \
                  libavc1394 \
+                 nasm \
                  yasm"
 
 ENV RUNTIME_DEPS="coreutils \
@@ -56,12 +57,11 @@ ENV BUILD_DEPS="fdk-aac-dev \
 RUN apk update && \
     apk add --no-cache --virtual .runtime-deps ${RUNTIME_DEPS} && \
     apk add --no-cache ${FFMPEG_CORE} && \
-    apk add --no-cache --virtual .build-deps ${BUILD_DEPS}
-
-RUN export SRC=/usr \
+    apk add --no-cache --virtual .build-deps ${BUILD_DEPS} && \
+    export SRC=/usr \
 	DIR=$(mktemp -d) && cd ${DIR} && \
-	curl -sLO https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.bz2 && \
-    tar -jx --strip-components=1 -f ffmpeg-${FFMPEG_VERSION}.tar.bz2 && \
+	curl -sL https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.bz2 | \
+    tar -jx --strip-components=1 && \
 	./configure \
     --prefix="${SRC}" \
     --extra-cflags="-I${SRC}/include" \
@@ -91,10 +91,8 @@ RUN export SRC=/usr \
     make -j $(nproc) && \
     make install && \
     make distclean && \
-	hash -r && \
-	cd /tmp && \
-	rm -rf ${DIR}
-
-RUN apk del .build-deps && \
+	rm -rf ${DIR} &&  \
+    apk del .build-deps && \
 	apk del .runtime-deps && \
-    rm -rf /var/cache/apk/*
+    rm -rf /var/cache/apk/* && \
+    hash -r
