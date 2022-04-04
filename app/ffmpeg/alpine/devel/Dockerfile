@@ -8,9 +8,9 @@ ARG LD_LIBRARY_PATH=/usr/local/ffmpeg
 ARG PREFIX=/usr/local
 ENV FFMPEG_VERSION=5.0
 
-RUN apk add --update autoconf automake bash binutils bzip2 cmake \
-    curl coreutils diffutils expat-dev file g++ gcc gperf libtool \
-    make python3 openssl-dev libcrypto1.1 libssl1.1 tar yasm zlib-dev \
+RUN apk add --update --no-cache autoconf automake bash binutils bzip2 \
+    cmake curl coreutils diffutils expat-dev file g++ gcc gperf libtool \
+    make python3 openssl-dev libcrypto1.1 libssl1.1 tar nasm yasm zlib-dev \
     libgcc libstdc++ ca-certificates harfbuzz
 
 COPY --from=deps ${PREFIX}/bin ${PREFIX}/bin

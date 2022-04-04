@@ -26,7 +26,7 @@ ENV OPENCOREAMR_VERSION=0.1.5   \
 
 RUN apk add --update --no-cache autoconf automake bash binutils bzip2 \
     cmake curl coreutils diffutils expat-dev file g++ gcc gperf libtool \
-    make python3 openssl-dev libcrypto1.1 libssl1.1 tar yasm zlib-dev \
+    make python3 openssl-dev libcrypto1.1 libssl1.1 tar nasm yasm zlib-dev \
     libgcc libstdc++ ca-certificates harfbuzz
 
 # opencore-amr https://sourceforge.net/projects/opencore-amr/
@@ -61,7 +61,7 @@ RUN DIR=/tmp/x265 && \
     sed -i "/-DEXTRA_LIB/ s/$/ -DCMAKE_INSTALL_PREFIX=\${PREFIX}/" multilib.sh && \
     sed -i "/^cmake/ s/$/ -DENABLE_CLI=OFF/" multilib.sh && \
     ./multilib.sh && \
-    make -C 8bit install && \
+    make -C 8bit -j $(nproc) install && \
     rm -rf ${DIR}
 
 # libogg https://www.xiph.org/ogg/
