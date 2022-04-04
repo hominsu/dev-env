@@ -18,42 +18,44 @@ COPY --from=deps ${PREFIX}/lib ${PREFIX}/lib
 COPY --from=deps ${PREFIX}/share ${PREFIX}/share
 COPY --from=deps ${PREFIX}/include ${PREFIX}/include
 
+ENV BUILD_OPTIONS="--disable-debug \
+                   --disable-doc \
+                   --disable-ffplay \
+                   --enable-shared \
+                   --enable-libopencore-amrnb \
+                   --enable-libopencore-amrwb \
+                   --enable-gpl \
+                   --enable-libass \
+                   --enable-libfreetype \
+                   --enable-libvidstab \
+                   --enable-libmp3lame \
+                   --enable-libopenjpeg \
+                   --enable-libopus \
+                   --enable-libtheora \
+                   --enable-libvorbis \
+                   --enable-libvpx \
+                   --enable-libxvid \
+                   --enable-libx264 \
+                   --enable-nonfree \
+                   --enable-openssl \
+                   --enable-libfdk_aac \
+                   --enable-libkvazaar \
+                   --enable-libaom --extra-libs=-lpthread \
+                   --enable-postproc \
+                   --enable-small \
+                   --enable-version3 \
+                   --extra-cflags=-I${PREFIX}/include \
+                   --extra-ldflags=-L${PREFIX}/lib \
+                   --extra-libs=-ldl \
+                   --prefix=${PREFIX}"
+
 # ffmpeg https://ffmpeg.org/
-RUN DIR=$(mktemp -d) && cd ${DIR} && \
+RUN export ENABLE_x265=$(if [[ $(uname -m) == *"arm"* ]]; then echo "false"; else echo "true"; fi) && \
+    if [[ $(ENABLE_x265) == "true" ]]; then export build_options="${BUILD_OPTIONS} --enable-libx265"; else export build_options=${BUILD_OPTIONS} fi && \
+    DIR=$(mktemp -d) && cd ${DIR} && \
     curl -sL https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.bz2 | \
     tar -jx --strip-components=1 && \
-    ./configure \
-    --disable-debug \
-    --disable-doc \
-    --disable-ffplay \
-    --enable-shared \
-    --enable-libopencore-amrnb \
-    --enable-libopencore-amrwb \
-    --enable-gpl \
-    --enable-libass \
-    --enable-libfreetype \
-    --enable-libvidstab \
-    --enable-libmp3lame \
-    --enable-libopenjpeg \
-    --enable-libopus \
-    --enable-libtheora \
-    --enable-libvorbis \
-    --enable-libvpx \
-    --enable-libx265 \
-    --enable-libxvid \
-    --enable-libx264 \
-    --enable-nonfree \
-    --enable-openssl \
-    --enable-libfdk_aac \
-    --enable-libkvazaar \
-    --enable-libaom --extra-libs=-lpthread \
-    --enable-postproc \
-    --enable-small \
-    --enable-version3 \
-    --extra-cflags="-I${PREFIX}/include" \
-    --extra-ldflags="-L${PREFIX}/lib" \
-    --extra-libs=-ldl \
-    --prefix="${PREFIX}" && \
+    ./configure ${build_options} && \
     make -j $(nproc) && \
     make install && \
     make distclean && \

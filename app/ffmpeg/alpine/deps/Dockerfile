@@ -48,15 +48,8 @@ RUN DIR=$(mktemp -d) && cd ${DIR} && \
     rm -rf ${DIR}
 
 # x265 http://x265.org/
-RUN DIR=$(mktemp -d) && cd ${DIR} && \
-    curl -sL https://download.videolan.org/pub/videolan/x265/x265_${X265_VERSION}.tar.gz | \
-    tar -zx --strip-components=1 && \
-    cd build/linux && \
-    sed -i "/-DEXTRA_LIB/ s/$/ -DCMAKE_INSTALL_PREFIX=\${PREFIX}/" multilib.sh && \
-    sed -i "/^cmake/ s/$/ -DENABLE_CLI=OFF/" multilib.sh && \
-    ./multilib.sh && \
-    make -C 8bit -j $(nproc) install && \
-    rm -rf ${DIR}
+RUN export ENABLE_x265=$(if [[ $(uname -m) == *"arm"* ]]; then echo "false"; else echo "true"; fi) && \
+    if [[ ${ENABLE_x265} == "true" ]]; then DIR=$(mktemp -d) && cd ${DIR} && curl -sL https://download.videolan.org/pub/videolan/x265/x265_${X265_VERSION}.tar.gz | tar -zx --strip-components=1 && cd build/linux && sed -i "/-DEXTRA_LIB/ s/$/ -DCMAKE_INSTALL_PREFIX=\${PREFIX}/" multilib.sh && sed -i "/^cmake/ s/$/ -DENABLE_CLI=OFF/" multilib.sh && ./multilib.sh && make -C 8bit -j $(nproc) install && rm -rf ${DIR}; fi
 
 # libogg https://www.xiph.org/ogg/
 RUN DIR=$(mktemp -d) && cd ${DIR} && \
