@@ -12,8 +12,8 @@ DOCKER_IMAGE=$(REPO)/$(shell echo $(APP_NAME) |awk -F '@' '{print $$0 ":$(IMG_TA
 
 PLATFORM?=linux/arm64,linux/amd64,linux/arm
 
-.PHONY: docker
-docker:
+.PHONY: ffmpeg-alpine
+ffmpeg-alpine:
 	cd ../../../../ && \
 	docker build \
 	--build-arg AUTHOR_NAME=$(AUTHOR_NAME) \
@@ -21,8 +21,8 @@ docker:
 	--file app/$(APP_RELATIVE_PATH)/Dockerfile \
 	--tag $(DOCKER_IMAGE) .
 
-.PHONY: buildx
-buildx:
+.PHONY: ffmpeg-alpine-buildx
+ffmpeg-alpine-buildx:
 	cd ../../../../ && \
 	docker buildx build \
 	--build-arg AUTHOR_NAME=$(AUTHOR_NAME) \

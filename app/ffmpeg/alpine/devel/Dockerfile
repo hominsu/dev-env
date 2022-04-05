@@ -11,7 +11,7 @@ ENV FFMPEG_VERSION=5.0
 RUN apk add --update --no-cache autoconf automake bash binutils bzip2 \
     cmake curl coreutils diffutils expat-dev file g++ gcc gperf libtool \
     make python3 openssl-dev libcrypto1.1 libssl1.1 tar nasm yasm zlib-dev \
-    libgcc libstdc++ ca-certificates harfbuzz
+    musl libgcc libstdc++ ca-certificates harfbuzz
 
 COPY --from=deps ${PREFIX}/bin ${PREFIX}/bin
 COPY --from=deps ${PREFIX}/lib ${PREFIX}/lib
@@ -36,6 +36,7 @@ ENV BUILD_OPTIONS="--disable-debug \
                    --enable-libvpx \
                    --enable-libxvid \
                    --enable-libx264 \
+                   --enable-libx265 \
                    --enable-nonfree \
                    --enable-openssl \
                    --enable-libfdk_aac \
@@ -50,8 +51,7 @@ ENV BUILD_OPTIONS="--disable-debug \
                    --prefix=${PREFIX}"
 
 # ffmpeg https://ffmpeg.org/
-RUN export ENABLE_x265=$(if [[ $(uname -m) == *"arm"* ]]; then echo "false"; else echo "true"; fi) && \
-    if [[ $(ENABLE_x265) == "true" ]]; then export build_options="${BUILD_OPTIONS} --enable-libx265"; else export build_options=${BUILD_OPTIONS} fi && \
+RUN export build_options=${BUILD_OPTIONS} && \
     DIR=$(mktemp -d) && cd ${DIR} && \
     curl -sL https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.bz2 | \
     tar -jx --strip-components=1 && \

@@ -1,20 +1,20 @@
-.PHONY: ffmpeg-docker
-# build ffmpeg images for current platform via docker
-ffmpeg-docker:
-	find app/ffmpeg -mindepth 2 -maxdepth 2 -type d -print | sort | xargs -L 1 bash -c 'cd "$$0" && pwd && $(MAKE) docker'
+.PHONY: ffmpeg-alpine
+# build ffmpeg-alpine images for current platform via docker
+ffmpeg-alpine:
+	find app/ffmpeg/alpine -mindepth 1 -maxdepth 1 -type d -print | sort | xargs -L 1 bash -c 'cd "$$0" && pwd && $(MAKE) ffmpeg-alpine'
 
-.PHONY: ffmpeg-buildx
-# build ffmpeg images for multi-platform via buildx
-ffmpeg-buildx:
-	find app/ffmpeg -mindepth 2 -maxdepth 2 -type d -print | sort | xargs -L 1 bash -c 'cd "$$0" && pwd && $(MAKE) buildx'
+.PHONY: ffmpeg-alpine-buildx
+# build ffmpeg-alpine images for multi-platform via buildx
+ffmpeg-alpine-buildx:
+	find app/ffmpeg/alpine -mindepth 1 -maxdepth 1 -type d -print | sort | xargs -L 1 bash -c 'cd "$$0" && pwd && $(MAKE) ffmpeg-alpine-buildx'
 
-.PHONY: all-docker
+.PHONY: all
 # build all images for current platform via docker
-all-docker: ffmpeg-docker
+all-docker: ffmpeg-alpine
 
 .PHONY: all-buildx
 # build all images for multi-platform via buildx
-all-buildx: ffmpeg-buildx
+all-buildx: ffmpeg-alpine-buildx
 
 # show help
 help:

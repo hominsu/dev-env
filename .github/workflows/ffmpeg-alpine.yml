@@ -1,10 +1,10 @@
-name: FFmpeg
+name: FFmpeg Alpine
 
 on:
   push:
-    tags: [ '*.*.*' ]
+    tags: [ 'ffmpeg-alpine-v*.*.*' ]
     paths:
-      - 'app/ffmpeg'
+      - 'app/ffmpeg/alpine'
 
 jobs:
   set-matrix:
@@ -67,7 +67,7 @@ jobs:
 
       - name: Build and Push ${{ matrix.name }}
         run: |
-          make ffmpeg-buildx REPO=${{ matrix.push_link }} VERSION=${{ needs.set-matrix.outputs.git_tag }}
+          make ffmpeg-alpine-buildx REPO=${{ matrix.push_link }} VERSION=${{ needs.set-matrix.outputs.git_tag }}
 
   deploy:
     name: Deploy
