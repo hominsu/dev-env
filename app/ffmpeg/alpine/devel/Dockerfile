@@ -62,11 +62,10 @@ ENV BUILD_OPTIONS="--disable-debug \
                    --prefix=${PREFIX}"
 
 # ffmpeg https://ffmpeg.org/
-RUN export build_options=${BUILD_OPTIONS} && \
-    DIR=$(mktemp -d) && cd ${DIR} && \
+RUN DIR=$(mktemp -d) && cd ${DIR} && \
     curl -sL https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.bz2 | \
     tar -jx --strip-components=1 && \
-    ./configure ${build_options} && \
+    ./configure ${BUILD_OPTIONS} && \
     make -j $(nproc) && \
     make install && \
     make distclean && \

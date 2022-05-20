@@ -30,8 +30,7 @@ ENV OPENCOREAMR_VERSION=0.1.5   \
     FRIBIDI_VERSION=1.0.11      \
     FONTCONFIG_VERSION=2.14.0   \
     LIBASS_VERSION=0.15.2       \
-    KVAZAAR_VERSION=2.1.0       \
-    AOM_VERSION=master
+    KVAZAAR_VERSION=2.1.0
 
 RUN apk add --update --no-cache autoconf automake bash binutils bzip2 \
     cmake curl coreutils diffutils expat-dev file g++ gcc gperf libtool \
@@ -137,7 +136,7 @@ RUN DIR=$(mktemp -d) && cd ${DIR} && \
     curl -sL http://downloads.xvid.org/downloads/xvidcore-${XVID_VERSION}.tar.gz | \
     tar -zx --strip-components=1 && \
     cd build/generic && \
-    ./configure --prefix="${PREFIX}" --bindir="${PREFIX}/bin" --datadir="${DIR}" --enable-shared --enable-shared && \
+    ./configure --prefix="${PREFIX}" --bindir="${PREFIX}/bin" --datadir="${DIR}" --enable-shared && \
     make -j $(nproc) && \
     make install && \
     rm -rf ${DIR}

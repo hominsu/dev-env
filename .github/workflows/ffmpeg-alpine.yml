@@ -28,7 +28,7 @@ jobs:
           echo "::set-output name=tag::$tag"
 
   build:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     needs: [ set-matrix ]
     strategy:
       matrix: ${{fromJSON(needs.set-matrix.outputs.matrix)}}
