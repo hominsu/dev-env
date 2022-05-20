@@ -1,5 +1,16 @@
-FROM hominsu/ffmpeg-alpine:devel as devel
+# syntax=docker/dockerfile:1.4
+ARG REPO
+
+FROM $REPO/ffmpeg-alpine:devel as devel
 FROM alpine:3.15
+
+# image info
+ARG AUTHOR_NAME
+ARG AUTHOR_EMAIL
+ARG VERSION
+
+# label
+LABEL author=$AUTHOR_NAME email=${AUTHOR_EMAIL} version=$VERSION
 
 COPY --from=devel /tmp/fakeroot/bin /usr/local/bin
 COPY --from=devel /tmp/fakeroot/share /usr/local/share

@@ -10,7 +10,7 @@ REPO=hominsu
 APP_NAME=$(shell echo $(IMG_RELATIVE_PATH) | sed -En "s/\//-/p")
 DOCKER_IMAGE=$(REPO)/$(shell echo $(APP_NAME) |awk -F '@' '{print $$0 ":$(IMG_TAG)"}')
 
-PLATFORM?=linux/arm64,linux/amd64,linux/arm
+PLATFORM?=linux/arm64,linux/amd64
 
 .PHONY: ffmpeg-alpine
 ffmpeg-alpine:
@@ -19,15 +19,4 @@ ffmpeg-alpine:
 	--build-arg AUTHOR_NAME=$(AUTHOR_NAME) \
 	--build-arg AUTHOR_EMAIL=$(AUTHOR_EMAIL) \
 	--file app/$(APP_RELATIVE_PATH)/Dockerfile \
-	--tag $(DOCKER_IMAGE) .
-
-.PHONY: ffmpeg-alpine-buildx
-ffmpeg-alpine-buildx:
-	cd ../../../../ && \
-	docker buildx build \
-	--build-arg AUTHOR_NAME=$(AUTHOR_NAME) \
-	--build-arg AUTHOR_EMAIL=$(AUTHOR_EMAIL) \
-	--file app/$(APP_RELATIVE_PATH)/Dockerfile \
-	--platform=$(PLATFORM) \
-	--push \
 	--tag $(DOCKER_IMAGE) .

@@ -1,4 +1,13 @@
+# syntax=docker/dockerfile:1.4
 FROM alpine:3.15 AS build
+
+# image info
+ARG AUTHOR_NAME
+ARG AUTHOR_EMAIL
+ARG VERSION
+
+# label
+LABEL author=$AUTHOR_NAME email=${AUTHOR_EMAIL} version=$VERSION
 
 WORKDIR /tmp/workdir
 
@@ -48,8 +57,14 @@ RUN DIR=$(mktemp -d) && cd ${DIR} && \
     rm -rf ${DIR}
 
 # x265 http://x265.org/
-RUN export ENABLE_x265=$(if [[ $(uname -m) == *"arm"* ]]; then echo "false"; else echo "true"; fi) && \
-    if [[ ${ENABLE_x265} == "true" ]]; then DIR=$(mktemp -d) && cd ${DIR} && curl -sL https://download.videolan.org/pub/videolan/x265/x265_${X265_VERSION}.tar.gz | tar -zx --strip-components=1 && cd build/linux && sed -i "/-DEXTRA_LIB/ s/$/ -DCMAKE_INSTALL_PREFIX=\${PREFIX}/" multilib.sh && sed -i "/^cmake/ s/$/ -DENABLE_CLI=OFF/" multilib.sh && ./multilib.sh && make -C 8bit -j $(nproc) install && rm -rf ${DIR}; else apk add --no-cache x265-dev ; fi
+RUN DIR=$(mktemp -d) && cd ${DIR} && \
+    curl -sL https://download.videolan.org/pub/videolan/x265/x265_${X265_VERSION}.tar.gz | \
+    tar -zx --strip-components=1 && \
+    cd build/linux && \
+    sed -i "/-DEXTRA_LIB/ s/$/ -DCMAKE_INSTALL_PREFIX=\${PREFIX}/" multilib.sh && \
+    sed -i "/^cmake/ s/$/ -DENABLE_CLI=OFF/" multilib.sh && \
+    ./multilib.sh && make -C 8bit -j $(nproc) install && \
+    rm -rf ${DIR}
 
 # libogg https://www.xiph.org/ogg/
 RUN DIR=$(mktemp -d) && cd ${DIR} && \
@@ -92,8 +107,21 @@ RUN DIR=$(mktemp -d) && cd ${DIR} && \
     rm -rf ${DIR}
 
 # libvpx https://www.webmproject.org/code/
-RUN export BUILD_VPX=$(if [[ $(uname -m) == *"arm"* ]]; then echo "false"; else echo "true"; fi) && \
-    if [[ ${BUILD_VPX} == "true" ]]; then DIR=$(mktemp -d) && cd ${DIR} && curl -sL https://codeload.github.com/webmproject/libvpx/tar.gz/v${VPX_VERSION} | tar -zx --strip-components=1 && ./configure --prefix="${PREFIX}" --enable-vp8 --enable-vp9 --enable-pic --enable-shared --disable-debug --disable-examples --disable-docs --disable-install-bins && make -j $(nproc) && make install && rm -rf ${DIR}; else apk add --no-cache libvpx libvpx-dev; fi
+RUN DIR=$(mktemp -d) && cd ${DIR} && \
+    curl -sL https://codeload.github.com/webmproject/libvpx/tar.gz/v${VPX_VERSION} | \
+    tar -zx --strip-components=1 && \
+    ./configure --prefix="${PREFIX}"  \
+    --enable-vp8  \
+    --enable-vp9  \
+    --enable-pic  \
+    --enable-shared  \
+    --disable-debug  \
+    --disable-examples  \
+    --disable-docs \
+    --disable-install-bins &&  \
+    make -j $(nproc) &&  \
+    make install &&  \
+    rm -rf ${DIR}
 
 # libmp3lame http://lame.sourceforge.net/
 RUN DIR=$(mktemp -d) && cd ${DIR} && \
@@ -193,8 +221,16 @@ RUN DIR=$(mktemp -d) && cd ${DIR} && \
     rm -rf ${DIR}
 
 # aom https://aomedia.org/av1-features/get-started/
-RUN export BUILD_AOM=$(if [[ $(uname -m) == *"arm"* ]]; then echo "false"; else echo "true"; fi) && \
-    if [[ ${BUILD_AOM} == "true" ]]; then DIR=$(mktemp -d) && cd ${DIR} && curl -sLO https://aomedia.googlesource.com/aom/+archive/main.tar.gz && tar -zx -f main.tar.gz && rm -rf CMakeCache.txt CMakeFiles && mkdir -p ./aom_build && cd ./aom_build && cmake -DCMAKE_INSTALL_PREFIX="${PREFIX}" -DBUILD_SHARED_LIBS=1 .. && make -j $(nproc) && make install && rm -rf ${DIR}; else apk add --no-cache aom-dev; fi
+RUN DIR=$(mktemp -d) && cd ${DIR} && \
+    curl -sLO https://aomedia.googlesource.com/aom/+archive/main.tar.gz && \
+    tar -zx -f main.tar.gz && \
+    rm -rf CMakeCache.txt CMakeFiles && \
+    mkdir -p ./aom_build && \
+    cd ./aom_build && \
+    cmake -DCMAKE_INSTALL_PREFIX="${PREFIX}" -DBUILD_SHARED_LIBS=1 .. && \
+    make -j $(nproc) && \
+    make install && \
+    rm -rf ${DIR}
 
 RUN rm -rf /var/cache/apk/* && \
     hash -r

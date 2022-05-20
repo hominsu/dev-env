@@ -3,18 +3,29 @@
 ffmpeg-alpine:
 	find app/ffmpeg/alpine -mindepth 1 -maxdepth 1 -type d -print | sort | xargs -L 1 bash -c 'cd "$$0" && pwd && $(MAKE) ffmpeg-alpine'
 
-.PHONY: ffmpeg-alpine-buildx
-# build ffmpeg-alpine images for multi-platform via buildx
-ffmpeg-alpine-buildx:
-	find app/ffmpeg/alpine -mindepth 1 -maxdepth 1 -type d -print | sort | xargs -L 1 bash -c 'cd "$$0" && pwd && $(MAKE) ffmpeg-alpine-buildx'
+.PHONY: ffmpeg-alpine-bake
+# build ffmpeg-alpine images for multi-platform via buildx bake
+ffmpeg-alpine-bake:
+	cd app/ffmpeg/alpine && \
+	docker buildx bake --file docker-bake.hcl --load
+
+.PHONY: ffmpeg-alpine-push
+# build ffmpeg-alpine images for multi-platform via buildx bake and push to the container registry
+ffmpeg-alpine-push:
+	cd app/ffmpeg/alpine && \
+	docker buildx bake --file docker-bake.hcl --push
 
 .PHONY: all
 # build all images for current platform via docker
 all-docker: ffmpeg-alpine
 
-.PHONY: all-buildx
-# build all images for multi-platform via buildx
-all-buildx: ffmpeg-alpine-buildx
+.PHONY: all-bake
+# build all images for multi-platform via buildx bake
+all-bake: ffmpeg-alpine-bake
+
+.PHONY: all-push
+# build all images for multi-platform via buildx bake and push to the container registry
+all-push: ffmpeg-alpine-push
 
 # show help
 help:
