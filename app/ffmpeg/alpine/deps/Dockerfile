@@ -27,14 +27,14 @@ ENV OPENCOREAMR_VERSION=0.1.5   \
     OPENJPEG_VERSION=2.4.0      \
     FREETYPE_VERSION=2.12.0     \
     LIBVIDSTAB_VERSION=1.1.0    \
-    FRIBIDI_VERSION=1.0.11      \
+    FRIBIDI_VERSION=1.0.12      \
     FONTCONFIG_VERSION=2.14.0   \
     LIBASS_VERSION=0.15.2       \
     KVAZAAR_VERSION=2.1.0
 
 RUN apk add --update --no-cache autoconf automake bash binutils bzip2 \
-    cmake curl coreutils diffutils expat-dev file g++ gcc gperf libtool \
-    make python3 openssl-dev libcrypto1.1 libssl1.1 tar nasm yasm zlib-dev \
+    git cmake curl coreutils diffutils expat-dev file g++ gcc gperf libtool \
+    flex bison make python3 openssl-dev libcrypto1.1 libssl1.1 tar nasm yasm zlib-dev \
     libgcc libstdc++ ca-certificates harfbuzz
 
 # opencore-amr https://sourceforge.net/projects/opencore-amr/
@@ -178,13 +178,23 @@ RUN DIR=$(mktemp -d) && cd ${DIR} && \
     make install && \
     rm -rf ${DIR}
 
+# o2man
+RUN DIR=$(mktemp -d) && cd ${DIR} && \
+    git clone https://github.com/fribidi/c2man.git ${DIR} --depth=1 && \
+    ./Configure -dE && \
+    sh config_h.SH && sh flatten.SH && sh Makefile.SH && \
+    make depend && \
+    make -j $(nproc) && \
+    make install && \
+    rm -rf ${DIR}
+
 # fridibi https://www.fribidi.org/
 RUN DIR=$(mktemp -d) && cd ${DIR} && \
     curl -sL https://github.com/fribidi/fribidi/archive/v${FRIBIDI_VERSION}.tar.gz | \
     tar -zx --strip-components=1 && \
     ./autogen.sh && \
     ./configure -prefix="${PREFIX}" --disable-static --enable-shared && \
-    make && \
+    make -j $(nproc) && \
     make install && \
     rm -rf ${DIR}
 
