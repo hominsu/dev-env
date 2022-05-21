@@ -1,5 +1,7 @@
 # syntax=docker/dockerfile:1.4
-FROM alpine:3.15 AS build
+ARG ALPINE_VERSION
+
+FROM alpine:${ALPINE_VERSION} AS build
 
 # image info
 ARG AUTHOR_NAME
@@ -7,7 +9,7 @@ ARG AUTHOR_EMAIL
 ARG VERSION
 
 # label
-LABEL author=$AUTHOR_NAME email=${AUTHOR_EMAIL} version=$VERSION
+LABEL author=${AUTHOR_NAME} email=${AUTHOR_EMAIL} version=${VERSION}
 
 WORKDIR /tmp/workdir
 
@@ -173,6 +175,9 @@ RUN DIR=$(mktemp -d) && cd ${DIR} && \
 RUN DIR=$(mktemp -d) && cd ${DIR} && \
     curl -sL https://github.com/georgmartius/vid.stab/archive/v${LIBVIDSTAB_VERSION}.tar.gz | \
     tar -zx --strip-components=1 && \
+    if [ $(uname -m) = "aarch64" ]; then \
+    sed -i "/if(SSE2_FOUND)/i set(SSE2_FOUND false)" CMakeLists.txt ; \
+    fi && \
     cmake -DCMAKE_INSTALL_PREFIX="${PREFIX}" . && \
     make -j $(nproc) && \
     make install && \

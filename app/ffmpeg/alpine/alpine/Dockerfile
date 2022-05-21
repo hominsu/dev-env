@@ -1,5 +1,7 @@
 # syntax=docker/dockerfile:1.4
-FROM alpine:3.15
+ARG ALPINE_VERSION
+
+FROM alpine:${ALPINE_VERSION} AS build
 
 # image info
 ARG AUTHOR_NAME
@@ -7,9 +9,9 @@ ARG AUTHOR_EMAIL
 ARG VERSION
 
 # label
-LABEL author=$AUTHOR_NAME email=${AUTHOR_EMAIL} version=$VERSION
+LABEL author=${AUTHOR_NAME} email=${AUTHOR_EMAIL} version=${VERSION}
 
-ENV FFMPEG_VERSION=5.0
+ENV FFMPEG_VERSION=5.0.1
 
 ENV FFMPEG_CORE="bash \
                  tzdata \

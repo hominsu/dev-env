@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1.4
 ARG REPO
+ARG ALPINE_VERSION
 
-FROM $REPO/ffmpeg-alpine:deps AS deps
+FROM ${REPO}/ffmpeg-alpine:alpine-${ALPINE_VERSION}-deps AS deps
 FROM alpine:3.15
 
 # image info
@@ -10,14 +11,14 @@ ARG AUTHOR_EMAIL
 ARG VERSION
 
 # label
-LABEL author=$AUTHOR_NAME email=${AUTHOR_EMAIL} version=$VERSION
+LABEL author=${AUTHOR_NAME} email=${AUTHOR_EMAIL} version=${VERSION}
 
 WORKDIR /tmp/workdir
 
 ARG PKG_CONFIG_PATH=/usr/local/ffmpeg/pkgconfig
 ARG LD_LIBRARY_PATH=/usr/local/ffmpeg
 ARG PREFIX=/usr/local
-ENV FFMPEG_VERSION=5.0
+ENV FFMPEG_VERSION=5.0.1
 
 RUN apk add --update --no-cache autoconf automake bash binutils bzip2 \
     cmake curl coreutils diffutils expat-dev file g++ gcc gperf libtool \
