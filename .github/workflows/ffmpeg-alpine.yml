@@ -35,7 +35,7 @@ jobs:
     needs: [ set-matrix ]
     strategy:
       matrix:
-        platforms: [ amd64 ]
+        platforms: [ amd64, arm64 ]
 
     permissions:
       contents: read
@@ -74,13 +74,64 @@ jobs:
       - name: Build and Push ${{ matrix.platforms }}
         run: |
           platform=$(o=linux && p=${{ matrix.platforms }} && echo \*.platform=$o/$p)
-          REPO=hominsu VERSION=${{ needs.set-matrix.outputs.git_tag }} docker buildx bake --file docker-bake.hcl --set "$platform" --push
-          REPO=ghcr.io/hominsu VERSION=${{ needs.set-matrix.outputs.git_tag }} docker buildx bake --file docker-bake.hcl --set "$platform" --push
+          REPO=hominsu VERSION=${{ needs.set-matrix.outputs.git_tag }} docker buildx bake --file docker-bake.hcl ffmpeg-alpine-deps ffmpeg-alpine-devel ffmpeg-alpine-runtime --set "$platform" --push
+          REPO=ghcr.io/hominsu VERSION=${{ needs.set-matrix.outputs.git_tag }} docker buildx bake --file docker-bake.hcl ffmpeg-alpine-deps ffmpeg-alpine-devel ffmpeg-alpine-runtime --set "$platform" --push
+
+  build-alpine:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app/ffmpeg/alpine
+    needs: [ set-matrix ]
+    strategy:
+      matrix:
+        platforms: [ amd64, arm64 ]
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Log into registry Docker
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_ID }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Log into registry Ghcr
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set Up QEMU
+        id: qemu
+        uses: docker/setup-qemu-action@v2
+        with:
+          image: tonistiigi/binfmt:latest
+          platforms: all
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          install: true
+
+      - name: Build and Push ${{ matrix.platforms }}
+        run: |
+          platform=$(o=linux && p=${{ matrix.platforms }} && echo \*.platform=$o/$p)
+          REPO=hominsu VERSION=${{ needs.set-matrix.outputs.git_tag }} docker buildx bake --file docker-bake.hcl ffmpeg-alpine-alpine --set "$platform" --push
+          REPO=ghcr.io/hominsu VERSION=${{ needs.set-matrix.outputs.git_tag }} docker buildx bake --file docker-bake.hcl ffmpeg-alpine-alpine --set "$platform" --push
+
 
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
-    needs: [ build ]
+    needs: [ build, build-alpine ]
 
     steps:
       - name: Checkout code

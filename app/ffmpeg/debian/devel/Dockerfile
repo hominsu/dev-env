@@ -255,7 +255,7 @@ RUN DIR=$(mktemp -d) && cd ${DIR} && \
     curl -sL https://github.com/georgmartius/vid.stab/archive/v${LIBVIDSTAB_VERSION}.tar.gz | \
     tar -zx --strip-components=1 && \
     if [ $(uname -m) = "aarch64" ]; then \
-    sed -i "/if(SSE2_FOUND)/i set(SSE2_FOUND false CACHE BOOL)/" multilib.sh ; \
+    sed -i "/if(SSE2_FOUND)/i set(SSE2_FOUND false)" CMakeLists.txt ; \
     fi && \
     cmake -DCMAKE_INSTALL_PREFIX="${PREFIX}" . && \
     make -j $(nproc) && \
@@ -276,9 +276,8 @@ RUN DIR=$(mktemp -d) && cd ${DIR} && \
 RUN DIR=$(mktemp -d) && cd ${DIR} && \
     curl -sL https://github.com/fribidi/fribidi/archive/v${FRIBIDI_VERSION}.tar.gz | \
     tar -zx --strip-components=1 && \
-    sed -i 's/^SUBDIRS =.*/SUBDIRS=gen.tab charset lib bin/' Makefile.am && \
     ./autogen.sh && \
-    ./configure --prefix="${PREFIX}" --disable-doc --disable-static --enable-shared && \
+    ./configure --prefix="${PREFIX}" --disable-static --enable-shared && \
     make -j $(nproc) && \
     make install && \
     rm -rf ${DIR}

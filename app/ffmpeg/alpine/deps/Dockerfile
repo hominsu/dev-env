@@ -198,7 +198,7 @@ RUN DIR=$(mktemp -d) && cd ${DIR} && \
     curl -sL https://github.com/fribidi/fribidi/archive/v${FRIBIDI_VERSION}.tar.gz | \
     tar -zx --strip-components=1 && \
     ./autogen.sh && \
-    ./configure -prefix="${PREFIX}" --disable-static --enable-shared && \
+    ./configure --prefix="${PREFIX}" --disable-static --enable-shared && \
     make -j $(nproc) && \
     make install && \
     rm -rf ${DIR}
