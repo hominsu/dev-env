@@ -29,13 +29,13 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app/ffmpeg/alpine
     needs: [ set-matrix ]
     strategy:
-      matrix: ${{fromJSON(needs.set-matrix.outputs.matrix)}}
-
-    env:
-      id: ${{ secrets[matrix.id] }}
-      token: ${{ secrets[matrix.token] }}
+      matrix:
+        platforms: [ amd64 ]
 
     permissions:
       contents: read
@@ -45,12 +45,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Log into registry ${{ matrix.name }}
+      - name: Log into registry Docker
         uses: docker/login-action@v2
         with:
-          registry: ${{ matrix.register }}
-          username: ${{ env.id }}
-          password: ${{ env.token }}
+          username: ${{ secrets.DOCKER_ID }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Log into registry Ghcr
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set Up QEMU
         id: qemu
@@ -65,9 +71,11 @@ jobs:
         with:
           install: true
 
-      - name: Build and Push ${{ matrix.name }}
+      - name: Build and Push ${{ matrix.platforms }}
         run: |
-          make ffmpeg-alpine-push REPO=${{ matrix.push_link }} VERSION=${{ needs.set-matrix.outputs.git_tag }}
+          platform=$(o=linux && p=${{ matrix.platforms }} && echo \*.platform=$o/$p)
+          REPO=hominsu VERSION=${{ needs.set-matrix.outputs.git_tag }} docker buildx bake --file docker-bake.hcl --set "$platform" --push
+          REPO=ghcr.io/hominsu VERSION=${{ needs.set-matrix.outputs.git_tag }} docker buildx bake --file docker-bake.hcl --set "$platform" --push
 
   deploy:
     name: Deploy
