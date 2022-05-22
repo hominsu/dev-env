@@ -77,6 +77,7 @@ ENV BUILD_DEPS="autoconf \
                 pkg-config \
                 flex \
                 bison \
+                libharfbuzz-dev \
                 python \
                 libssl-dev \
                 yasm \
@@ -169,8 +170,6 @@ RUN DIR=$(mktemp -d) && cd ${DIR} && \
     curl -sL http://downloads.xiph.org/releases/theora/libtheora-${THEORA_VERSION}.tar.gz | \
     tar -zx --strip-components=1 && \
     rm config.guess config.sub && \
-    curl -sLo config.guess 'https://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.guess;hb=HEAD' && \
-    curl -sLo config.sub 'https://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.sub;hb=HEAD' && \
     ./configure --prefix="${PREFIX}" --with-ogg="${PREFIX}" --enable-shared && \
     make -j $(nproc) && \
     make install && \
@@ -293,14 +292,12 @@ RUN DIR=$(mktemp -d) && cd ${DIR} && \
 
 # libass https://github.com/libass/libass
 RUN DIR=$(mktemp -d) && cd ${DIR} && \
-    apk add --no-cache harfbuzz-dev && \
     curl -sL https://github.com/libass/libass/archive/${LIBASS_VERSION}.tar.gz | \
     tar -zx --strip-components=1 && \
     ./autogen.sh && \
     ./configure -prefix="${PREFIX}" --disable-static --enable-shared && \
     make -j $(nproc) && \
     make install && \
-    apk del harfbuzz-dev && \
     rm -rf ${DIR}
 
 # kvazaar https://github.com/ultravideo/kvazaar
