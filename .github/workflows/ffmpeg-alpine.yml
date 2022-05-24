@@ -45,19 +45,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Log into registry Docker
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_ID }}
-          password: ${{ secrets.DOCKER_TOKEN }}
-
-      - name: Log into registry Ghcr
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Set Up QEMU
         id: qemu
         uses: docker/setup-qemu-action@v2
@@ -71,11 +58,27 @@ jobs:
         with:
           install: true
 
-      - name: Build and Push ${{ matrix.platforms }}
+      - name: Build ${{ matrix.platforms }}
         run: |
           platform=$(o=linux && p=${{ matrix.platforms }} && echo \*.platform=$o/$p)
-          REPO=hominsu VERSION=${{ needs.set-matrix.outputs.git_tag }} docker buildx bake --file docker-bake.hcl ffmpeg-alpine-deps ffmpeg-alpine-devel ffmpeg-alpine-runtime --set "$platform" --push
-          REPO=ghcr.io/hominsu VERSION=${{ needs.set-matrix.outputs.git_tag }} docker buildx bake --file docker-bake.hcl ffmpeg-alpine-deps ffmpeg-alpine-devel ffmpeg-alpine-runtime --set "$platform" --push
+          REPO=hominsu VERSION=${{ needs.set-matrix.outputs.git_tag }} docker buildx bake --file docker-bake.hcl --load --set "*.cache-to=type=gha,mode=max" --set "*.cache-from=type=gha" --set "$platform" ffmpeg-alpine-deps ffmpeg-alpine-devel ffmpeg-alpine-runtime
+          REPO=ghcr.io/hominsu VERSION=${{ needs.set-matrix.outputs.git_tag }} docker buildx bake --file docker-bake.hcl --load --set "*.cache-to=type=gha,mode=max" --set "*.cache-from=type=gha" --set "$platform" ffmpeg-alpine-deps ffmpeg-alpine-devel ffmpeg-alpine-runtime
+
+      - name: Save ${{ matrix.platforms }} images
+        run: |
+          DIR=${{ github.workspace }}/artifact
+          mkdir -p $DIR
+          FIND_FLAG=${{ github.actor }}/ffmpeg-alpine
+          docker images | grep $FIND_FLAG | awk -v platform=${{ matrix.platforms }} '{ print "docker tag "$1":"$2" "$1":"$2"-"platform" && docker rmi "$1":"$2}' | sh
+          docker images | grep $FIND_FLAG | awk -v dir=$DIR '{ filename=$1"-"$2; gsub(/\//,"-",filename); print "docker save "$1":"$2" -o "dir"/"filename".tar"}' | sh
+          docker images | grep $FIND_FLAG | awk '{ print $1":"$2 }' | xargs docker rmi
+
+      - name: Upload ${{ matrix.platforms }} images
+        uses: actions/upload-artifact@v3
+        with:
+          name: ffmpeg-alpine-${{ matrix.platforms }}-artifact
+          path: ${{ github.workspace }}/artifact
+          if-no-files-found: error
 
   build-alpine:
     runs-on: ubuntu-latest
@@ -95,19 +98,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Log into registry Docker
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_ID }}
-          password: ${{ secrets.DOCKER_TOKEN }}
-
-      - name: Log into registry Ghcr
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Set Up QEMU
         id: qemu
         uses: docker/setup-qemu-action@v2
@@ -121,17 +111,69 @@ jobs:
         with:
           install: true
 
-      - name: Build and Push ${{ matrix.platforms }}
+      - name: Build ${{ matrix.platforms }}
         run: |
           platform=$(o=linux && p=${{ matrix.platforms }} && echo \*.platform=$o/$p)
-          REPO=hominsu VERSION=${{ needs.set-matrix.outputs.git_tag }} docker buildx bake --file docker-bake.hcl ffmpeg-alpine-alpine --set "$platform" --push
-          REPO=ghcr.io/hominsu VERSION=${{ needs.set-matrix.outputs.git_tag }} docker buildx bake --file docker-bake.hcl ffmpeg-alpine-alpine --set "$platform" --push
+          REPO=hominsu VERSION=${{ needs.set-matrix.outputs.git_tag }} docker buildx bake --file docker-bake.hcl --load --set "*.cache-to=type=gha,mode=max" --set "*.cache-from=type=gha" --set "$platform" ffmpeg-alpine-alpine
+          REPO=ghcr.io/hominsu VERSION=${{ needs.set-matrix.outputs.git_tag }} docker buildx bake --file docker-bake.hcl --load --set "*.cache-to=type=gha,mode=max" --set "*.cache-from=type=gha" --set "$platform" ffmpeg-alpine-alpine
 
+      - name: Save ${{ matrix.platforms }} images
+        run: |
+          DIR=${{ github.workspace }}/artifact
+          mkdir -p $DIR
+          FIND_FLAG=${{ github.actor }}/ffmpeg-alpine
+          docker images | grep $FIND_FLAG | awk -v platform=${{ matrix.platforms }} '{ print "docker tag "$1":"$2" "$1":"$2"-"platform" && docker rmi "$1":"$2}' | sh
+          docker images | grep $FIND_FLAG | awk -v dir=$DIR '{ filename=$1"-"$2; gsub(/\//,"-",filename); print "docker save "$1":"$2" -o "dir"/"filename".tar"}' | sh
+          docker images | grep $FIND_FLAG | awk '{ print $1":"$2 }' | xargs docker rmi
+
+      - name: Upload ${{ matrix.platforms }} images
+        uses: actions/upload-artifact@v3
+        with:
+          name: ffmpeg-alpine-alpine-${{ matrix.platforms }}-artifact
+          path: ${{ github.workspace }}/artifact
+          if-no-files-found: error
+
+  push:
+    name: Push
+    runs-on: ubuntu-latest
+    needs: [ build, build-alpine ]
+
+    steps:
+      - name: Log into registry Docker
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_ID }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Log into registry Ghcr
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          path: ${{ github.workspace }}/artifact
+
+      - name: Load images
+        run: |
+          find $(pwd) | grep ".tar" | xargs ls -ld | awk 'NF>8{print $NF}' | awk '{print "docker load -i "$1}' | sh
+          
+      - name: Push image manifests
+        run: |
+          FIND_FLAG=${{ github.actor }}/ffmpeg-alpine
+          docker images | grep $FIND_FLAG | awk '{ print "docker push "$1":"$2 }' | sh
+          docker images | grep $FIND_FLAG | awk '{ gsub(/-(386|s390x|(a(?:md|rm)|mips|riscv|ppc)64([le]{0,2})|arm\/v[6-7])/, "", $2); if(!a[$1$2]++){ print $1; print $2 } }' | xargs -L 2 bash -c 'docker images | awk -v name="$0" -v tag="$1" "{ if(\$1 != name || !match(\$2, tag)){next}; if(!a[name\":\"tag]++){print name\":\"tag}; print \$1\":\"\$2 }" | xargs docker manifest create'
+          docker images | grep $FIND_FLAG | awk '{ gsub(/-(386|s390x|(a(?:md|rm)|mips|riscv|ppc)64([le]{0,2})|arm\/v[6-7])/, "", $2); if(!a[$1$2]++){ print $1; print $2 } }' | xargs -L 2 bash -c 'docker images | awk -v name="$0" -v tag="$1" "{ if(\$1 != name || !match(\$2, tag)){next}; if(!a[name\":\"tag]++){print name\":\"tag} }" | xargs docker manifest push'
+          docker images | grep $FIND_FLAG | awk '{ gsub(/-(386|s390x|(a(?:md|rm)|mips|riscv|ppc)64([le]{0,2})|arm\/v[6-7])/, "", $2); if(!a[$1$2]++){ print $1; print $2 } }' | xargs -L 2 bash -c 'docker images | awk -v name="$0" -v tag="$1" "{ if(\$1 != name || !match(\$2, tag)){next}; if(!a[name\":\"tag]++){print name\":\"tag} }" | xargs docker manifest rm'
+          docker images | grep $FIND_FLAG | awk '{ print $1":"$2 }' | xargs docker rmi
 
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
-    needs: [ build, build-alpine ]
+    needs: [ push ]
 
     steps:
       - name: Checkout code

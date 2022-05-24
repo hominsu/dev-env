@@ -43,7 +43,7 @@ RUN apk add --update --no-cache autoconf automake bash binutils bzip2 \
 RUN DIR=$(mktemp -d) && cd ${DIR} && \
     curl -sL https://kent.dl.sourceforge.net/project/opencore-amr/opencore-amr/opencore-amr-${OPENCOREAMR_VERSION}.tar.gz | \
     tar -zx --strip-components=1 && \
-    ./configure --prefix="${PREFIX}" --enable-shared  && \
+    ./configure --prefix="${PREFIX}" --enable-shared --disable-doc && \
     make -j $(nproc) && \
     make install && \
     rm -rf ${DIR}
@@ -119,6 +119,10 @@ RUN DIR=$(mktemp -d) && cd ${DIR} && \
     --disable-debug  \
     --disable-examples  \
     --disable-docs \
+    --disable-unit_tests \
+    --disable-decode_perf_tests \
+    --disable-encode_perf_tests \
+    --disable-install-docs \
     --disable-install-bins &&  \
     make -j $(nproc) &&  \
     make install &&  \
