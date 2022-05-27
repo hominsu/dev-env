@@ -27,7 +27,7 @@ jobs:
           tag=$(echo ${{ github.ref }} | rev | cut -d/ -f1 | rev)
           echo "::set-output name=tag::$tag"
 
-  build:
+  build-ffmpeg-alpine:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -58,29 +58,41 @@ jobs:
         with:
           install: true
 
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.job }}-${{ matrix.platforms }}-${{ needs.set-matrix.outputs.git_tag }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-${{ github.job }}-${{ matrix.platforms }}-
+
       - name: Build ${{ matrix.platforms }}
         run: |
           platform=$(o=linux && p=${{ matrix.platforms }} && echo \*.platform=$o/$p)
-          REPO=hominsu VERSION=${{ needs.set-matrix.outputs.git_tag }} docker buildx bake --file docker-bake.hcl --load --set "*.cache-to=type=gha,mode=max" --set "*.cache-from=type=gha" --set "$platform" ffmpeg-alpine-deps ffmpeg-alpine-devel ffmpeg-alpine-runtime
-          REPO=ghcr.io/hominsu VERSION=${{ needs.set-matrix.outputs.git_tag }} docker buildx bake --file docker-bake.hcl --load --set "*.cache-to=type=gha,mode=max" --set "*.cache-from=type=gha" --set "$platform" ffmpeg-alpine-deps ffmpeg-alpine-devel ffmpeg-alpine-runtime
+          cache_from=/tmp/.buildx-cache
+          cache_to=${{ github.workspace }}/${{ matrix.platforms }}/cache
+          REPO=hominsu VERSION=${{ needs.set-matrix.outputs.git_tag }} docker buildx bake --file docker-bake.hcl --load --set "*.cache-from=type=local,src=$cache_from" --set "*.cache-to=type=local,dest=$cache_to,mode=max" --set "$platform" ffmpeg-alpine-deps ffmpeg-alpine-devel ffmpeg-alpine-runtime
 
-      - name: Save ${{ matrix.platforms }} images
+      - name: Delete ${{ matrix.platforms }} images
         run: |
-          DIR=${{ github.workspace }}/artifact
-          mkdir -p $DIR
           FIND_FLAG=${{ github.actor }}/ffmpeg-alpine
-          docker images | grep $FIND_FLAG | awk -v platform=${{ matrix.platforms }} '{ print "docker tag "$1":"$2" "$1":"$2"-"platform" && docker rmi "$1":"$2}' | sh
-          docker images | grep $FIND_FLAG | awk -v dir=$DIR '{ filename=$1"-"$2; gsub(/\//,"-",filename); print "docker save "$1":"$2" -o "dir"/"filename".tar"}' | sh
           docker images | grep $FIND_FLAG | awk '{ print $1":"$2 }' | xargs docker rmi
+
+      - name: Copy cache
+        run: |
+          cache_from=/tmp/.buildx-cache
+          cache_to=${{ github.workspace }}/${{ matrix.platforms }}/cache
+          rm -rf $cache_from
+          cp -r $cache_to $cache_from
 
       - name: Upload ${{ matrix.platforms }} images
         uses: actions/upload-artifact@v3
         with:
-          name: ffmpeg-alpine-${{ matrix.platforms }}-artifact
-          path: ${{ github.workspace }}/artifact
+          name: ffmpeg-alpine-${{ matrix.platforms }}-cache
+          path: ${{ github.workspace }}/${{ matrix.platforms }}/cache
           if-no-files-found: error
 
-  build-alpine:
+  build-ffmpeg-alpine-alpine:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -111,34 +123,52 @@ jobs:
         with:
           install: true
 
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.job }}-${{ matrix.platforms }}-${{ needs.set-matrix.outputs.git_tag }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-${{ github.job }}-${{ matrix.platforms }}-
+
       - name: Build ${{ matrix.platforms }}
         run: |
           platform=$(o=linux && p=${{ matrix.platforms }} && echo \*.platform=$o/$p)
-          REPO=hominsu VERSION=${{ needs.set-matrix.outputs.git_tag }} docker buildx bake --file docker-bake.hcl --load --set "*.cache-to=type=gha,mode=max" --set "*.cache-from=type=gha" --set "$platform" ffmpeg-alpine-alpine
-          REPO=ghcr.io/hominsu VERSION=${{ needs.set-matrix.outputs.git_tag }} docker buildx bake --file docker-bake.hcl --load --set "*.cache-to=type=gha,mode=max" --set "*.cache-from=type=gha" --set "$platform" ffmpeg-alpine-alpine
+          cache_from=/tmp/.buildx-cache
+          cache_to=${{ github.workspace }}/${{ matrix.platforms }}/cache
+          REPO=hominsu VERSION=${{ needs.set-matrix.outputs.git_tag }} docker buildx bake --file docker-bake.hcl --load --set "*.cache-from=type=local,src=$cache_from" --set "*.cache-to=type=local,dest=$cache_to,mode=max" --set "$platform" ffmpeg-alpine-alpine
 
-      - name: Save ${{ matrix.platforms }} images
+      - name: Delete ${{ matrix.platforms }} images
         run: |
-          DIR=${{ github.workspace }}/artifact
-          mkdir -p $DIR
           FIND_FLAG=${{ github.actor }}/ffmpeg-alpine
-          docker images | grep $FIND_FLAG | awk -v platform=${{ matrix.platforms }} '{ print "docker tag "$1":"$2" "$1":"$2"-"platform" && docker rmi "$1":"$2}' | sh
-          docker images | grep $FIND_FLAG | awk -v dir=$DIR '{ filename=$1"-"$2; gsub(/\//,"-",filename); print "docker save "$1":"$2" -o "dir"/"filename".tar"}' | sh
           docker images | grep $FIND_FLAG | awk '{ print $1":"$2 }' | xargs docker rmi
+
+      - name: Copy cache
+        run: |
+          cache_from=/tmp/.buildx-cache
+          cache_to=${{ github.workspace }}/${{ matrix.platforms }}/cache
+          rm -rf $cache_from
+          cp -r $cache_to $cache_from
 
       - name: Upload ${{ matrix.platforms }} images
         uses: actions/upload-artifact@v3
         with:
-          name: ffmpeg-alpine-alpine-${{ matrix.platforms }}-artifact
-          path: ${{ github.workspace }}/artifact
+          name: ffmpeg-alpine-alpine-${{ matrix.platforms }}-cache
+          path: ${{ github.workspace }}/${{ matrix.platforms }}/cache
           if-no-files-found: error
 
   push:
     name: Push
     runs-on: ubuntu-latest
-    needs: [ build, build-alpine ]
+    defaults:
+      run:
+        working-directory: app/ffmpeg/alpine
+    needs: [ set-matrix, build-ffmpeg-alpine, build-ffmpeg-alpine-alpine ]
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
       - name: Log into registry Docker
         uses: docker/login-action@v2
         with:
@@ -155,20 +185,24 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v3
         with:
-          path: ${{ github.workspace }}/artifact
+          path: ${{ github.workspace }}/cache
 
-      - name: Load images
+      - name: Set Up QEMU
+        id: qemu
+        uses: docker/setup-qemu-action@v2
+        with:
+          image: tonistiigi/binfmt:latest
+          platforms: all
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          install: true
+
+      - name: Build and Push image manifests
         run: |
-          find $(pwd) | grep ".tar" | xargs ls -ld | awk 'NF>8{print $NF}' | awk '{print "docker load -i "$1}' | sh
-          
-      - name: Push image manifests
-        run: |
-          FIND_FLAG=${{ github.actor }}/ffmpeg-alpine
-          docker images | grep $FIND_FLAG | awk '{ print "docker push "$1":"$2 }' | sh
-          docker images | grep $FIND_FLAG | awk '{ gsub(/-(386|s390x|(a(?:md|rm)|mips|riscv|ppc)64([le]{0,2})|arm\/v[6-7])/, "", $2); if(!a[$1$2]++){ print $1; print $2 } }' | xargs -L 2 bash -c 'docker images | awk -v name="$0" -v tag="$1" "{ if(\$1 != name || !match(\$2, tag)){next}; if(!a[name\":\"tag]++){print name\":\"tag}; print \$1\":\"\$2 }" | xargs docker manifest create'
-          docker images | grep $FIND_FLAG | awk '{ gsub(/-(386|s390x|(a(?:md|rm)|mips|riscv|ppc)64([le]{0,2})|arm\/v[6-7])/, "", $2); if(!a[$1$2]++){ print $1; print $2 } }' | xargs -L 2 bash -c 'docker images | awk -v name="$0" -v tag="$1" "{ if(\$1 != name || !match(\$2, tag)){next}; if(!a[name\":\"tag]++){print name\":\"tag} }" | xargs docker manifest push'
-          docker images | grep $FIND_FLAG | awk '{ gsub(/-(386|s390x|(a(?:md|rm)|mips|riscv|ppc)64([le]{0,2})|arm\/v[6-7])/, "", $2); if(!a[$1$2]++){ print $1; print $2 } }' | xargs -L 2 bash -c 'docker images | awk -v name="$0" -v tag="$1" "{ if(\$1 != name || !match(\$2, tag)){next}; if(!a[name\":\"tag]++){print name\":\"tag} }" | xargs docker manifest rm'
-          docker images | grep $FIND_FLAG | awk '{ print $1":"$2 }' | xargs docker rmi
+          find ${{ github.workspace }}/cache -mindepth 1 -maxdepth 1 -type d -print | awk '{print "--set \"*.cache-from=type=local,src="$NF"\""}' | REPO=hominsu VERSION=${{ needs.set-matrix.outputs.git_tag }} xargs -t docker buildx bake --file docker-bake.hcl --push
 
   deploy:
     name: Deploy

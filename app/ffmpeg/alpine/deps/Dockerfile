@@ -7,9 +7,11 @@ FROM alpine:${ALPINE_VERSION} AS build
 ARG AUTHOR_NAME
 ARG AUTHOR_EMAIL
 ARG VERSION
+ARG ALPINE_VERSION
+ARG FFMPEG_VERSION
 
 # label
-LABEL author=${AUTHOR_NAME} email=${AUTHOR_EMAIL} version=${VERSION}
+LABEL author=${AUTHOR_NAME} email=${AUTHOR_EMAIL} version=${VERSION} alpine_version=${ALPINE_VERSION} ffmpeg_version=${FFMPEG_VERSION}
 
 WORKDIR /tmp/workdir
 

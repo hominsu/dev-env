@@ -18,6 +18,10 @@ variable "ALPINE_VERSION" {
   default = "3.15"
 }
 
+variable "FFMPEG_VERSION" {
+  default = "5.0.1"
+}
+
 group "default" {
   targets = [
     "ffmpeg-alpine-alpine",
@@ -36,9 +40,10 @@ target "ffmpeg-alpine-alpine" {
     REPO           = "${REPO}"
     VERSION        = "${VERSION}"
     ALPINE_VERSION = "${ALPINE_VERSION}"
+    FFMPEG_VERSION = "${FFMPEG_VERSION}"
   }
   tags = [
-    "${REPO}/ffmpeg-alpine:alpine-${ALPINE_VERSION}-alpine",
+    "${REPO}/ffmpeg-alpine:ffmpeg-${FFMPEG_VERSION}-alpine-${ALPINE_VERSION}-alpine",
   ]
   platforms = ["linux/arm64", "linux/amd64"]
 }
@@ -52,16 +57,17 @@ target "ffmpeg-alpine-deps" {
     REPO           = "${REPO}"
     VERSION        = "${VERSION}"
     ALPINE_VERSION = "${ALPINE_VERSION}"
+    FFMPEG_VERSION = "${FFMPEG_VERSION}"
   }
   tags = [
-    "${REPO}/ffmpeg-alpine:alpine-${ALPINE_VERSION}-deps",
+    "${REPO}/ffmpeg-alpine:ffmpeg-${FFMPEG_VERSION}-alpine-${ALPINE_VERSION}-deps",
   ]
   platforms = ["linux/arm64", "linux/amd64"]
 }
 
 target "ffmpeg-alpine-devel" {
   contexts = {
-    "${REPO}/ffmpeg-alpine:alpine-${ALPINE_VERSION}-deps" = "target:ffmpeg-alpine-deps"
+    "${REPO}/ffmpeg-alpine:ffmpeg-${FFMPEG_VERSION}-alpine-${ALPINE_VERSION}-deps" = "target:ffmpeg-alpine-deps"
   }
   dockerfile = "devel/Dockerfile"
   args       = {
@@ -70,17 +76,18 @@ target "ffmpeg-alpine-devel" {
     REPO           = "${REPO}"
     VERSION        = "${VERSION}"
     ALPINE_VERSION = "${ALPINE_VERSION}"
+    FFMPEG_VERSION = "${FFMPEG_VERSION}"
   }
   tags = [
-    "${REPO}/ffmpeg-alpine:alpine-${ALPINE_VERSION}-devel",
+    "${REPO}/ffmpeg-alpine:ffmpeg-${FFMPEG_VERSION}-alpine-${ALPINE_VERSION}-devel",
   ]
   platforms = ["linux/arm64", "linux/amd64"]
 }
 
 target "ffmpeg-alpine-runtime" {
   contexts = {
-    "${REPO}/ffmpeg-alpine:alpine-${ALPINE_VERSION}-deps" = "target:ffmpeg-alpine-deps"
-    "${REPO}/ffmpeg-alpine:alpine-${ALPINE_VERSION}-devel" = "target:ffmpeg-alpine-devel"
+    "${REPO}/ffmpeg-alpine:ffmpeg-${FFMPEG_VERSION}-alpine-${ALPINE_VERSION}-deps"  = "target:ffmpeg-alpine-deps"
+    "${REPO}/ffmpeg-alpine:ffmpeg-${FFMPEG_VERSION}-alpine-${ALPINE_VERSION}-devel" = "target:ffmpeg-alpine-devel"
   }
   dockerfile = "runtime/Dockerfile"
   args       = {
@@ -89,9 +96,10 @@ target "ffmpeg-alpine-runtime" {
     REPO           = "${REPO}"
     VERSION        = "${VERSION}"
     ALPINE_VERSION = "${ALPINE_VERSION}"
+    FFMPEG_VERSION = "${FFMPEG_VERSION}"
   }
   tags = [
-    "${REPO}/ffmpeg-alpine:alpine-${ALPINE_VERSION}-runtime",
+    "${REPO}/ffmpeg-alpine:ffmpeg-${FFMPEG_VERSION}-alpine-${ALPINE_VERSION}-runtime",
   ]
   platforms = ["linux/arm64", "linux/amd64"]
 }
