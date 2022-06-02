@@ -1,0 +1,230 @@
+name: FFmpeg Alpine
+
+on:
+  push:
+    tags: [ 'grpc-alpine-v*.*.*' ]
+    paths:
+      - 'app/grpc/alpine'
+
+jobs:
+  set-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      git_tag: ${{ steps.git_info.outputs.tag }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - id: set-matrix
+        run: |
+          JSON=$(cat .github/workflows/repo-setting.json | tr '\n' ' ' | sed 's/ //g')
+          echo "::set-output name=matrix::$JSON"
+
+      - id: git_info
+        run: |
+          tag=$(echo ${{ github.ref }} | rev | cut -d/ -f1 | rev)
+          echo "::set-output name=tag::$tag"
+
+  build-grpc-alpine:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app/grpc/alpine
+    needs: [ set-matrix ]
+    strategy:
+      matrix:
+        platforms: [ amd64, arm64, arm ]
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set Up QEMU
+        id: qemu
+        uses: docker/setup-qemu-action@v2
+        with:
+          image: tonistiigi/binfmt:latest
+          platforms: all
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          install: true
+
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.job }}-${{ matrix.platforms }}-${{ needs.set-matrix.outputs.git_tag }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-${{ github.job }}-${{ matrix.platforms }}-
+
+      - name: Build ${{ matrix.platforms }}
+        run: |
+          platform=$(o=linux && p=${{ matrix.platforms }} && echo \*.platform=$o/$p)
+          cache_from=/tmp/.buildx-cache
+          cache_to=${{ github.workspace }}/${{ matrix.platforms }}/cache
+          REPO=hominsu VERSION=${{ needs.set-matrix.outputs.git_tag }} docker buildx bake --file docker-bake.hcl --load --set "*.cache-from=type=local,src=$cache_from" --set "*.cache-to=type=local,dest=$cache_to,mode=max" --set "$platform" grpc-alpine-devel grpc-alpine-runtime
+
+      - name: Delete ${{ matrix.platforms }} images
+        run: |
+          FIND_FLAG=${{ github.actor }}/grpc-alpine
+          docker images | grep $FIND_FLAG | awk '{ print $1":"$2 }' | xargs docker rmi
+
+      - name: Copy cache
+        run: |
+          cache_from=/tmp/.buildx-cache
+          cache_to=${{ github.workspace }}/${{ matrix.platforms }}/cache
+          rm -rf $cache_from
+          cp -r $cache_to $cache_from
+
+      - name: Upload ${{ matrix.platforms }} images
+        uses: actions/upload-artifact@v3
+        with:
+          name: grpc-alpine-${{ matrix.platforms }}-cache
+          path: ${{ github.workspace }}/${{ matrix.platforms }}/cache
+          if-no-files-found: error
+
+  build-grpc-alpine-alpine:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app/grpc/alpine
+    needs: [ set-matrix ]
+    strategy:
+      matrix:
+        platforms: [ amd64, arm64, arm ]
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set Up QEMU
+        id: qemu
+        uses: docker/setup-qemu-action@v2
+        with:
+          image: tonistiigi/binfmt:latest
+          platforms: all
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          install: true
+
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.job }}-${{ matrix.platforms }}-${{ needs.set-matrix.outputs.git_tag }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-${{ github.job }}-${{ matrix.platforms }}-
+
+      - name: Build ${{ matrix.platforms }}
+        run: |
+          platform=$(o=linux && p=${{ matrix.platforms }} && echo \*.platform=$o/$p)
+          cache_from=/tmp/.buildx-cache
+          cache_to=${{ github.workspace }}/${{ matrix.platforms }}/cache
+          REPO=hominsu VERSION=${{ needs.set-matrix.outputs.git_tag }} docker buildx bake --file docker-bake.hcl --load --set "*.cache-from=type=local,src=$cache_from" --set "*.cache-to=type=local,dest=$cache_to,mode=max" --set "$platform" grpc-alpine-alpine
+
+      - name: Delete ${{ matrix.platforms }} images
+        run: |
+          FIND_FLAG=${{ github.actor }}/grpc-alpine
+          docker images | grep $FIND_FLAG | awk '{ print $1":"$2 }' | xargs docker rmi
+
+      - name: Copy cache
+        run: |
+          cache_from=/tmp/.buildx-cache
+          cache_to=${{ github.workspace }}/${{ matrix.platforms }}/cache
+          rm -rf $cache_from
+          cp -r $cache_to $cache_from
+
+      - name: Upload ${{ matrix.platforms }} images
+        uses: actions/upload-artifact@v3
+        with:
+          name: grpc-alpine-alpine-${{ matrix.platforms }}-cache
+          path: ${{ github.workspace }}/${{ matrix.platforms }}/cache
+          if-no-files-found: error
+
+  push:
+    name: Push
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app/grpc/alpine
+    needs: [ set-matrix, build-grpc-alpine, build-grpc-alpine-alpine ]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Log into registry Docker
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_ID }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Log into registry Ghcr
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          path: ${{ github.workspace }}/cache
+
+      - name: Set Up QEMU
+        id: qemu
+        uses: docker/setup-qemu-action@v2
+        with:
+          image: tonistiigi/binfmt:latest
+          platforms: all
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          install: true
+
+      - name: Build and Push image manifests
+        run: |
+          find ${{ github.workspace }}/cache -mindepth 1 -maxdepth 1 -type d -print | awk '{print "--set \"*.cache-from=type=local,src="$NF"\""}' | REPO=hominsu VERSION=${{ needs.set-matrix.outputs.git_tag }} xargs -t docker buildx bake --file docker-bake.hcl --push
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: [ push ]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Generate Changelog
+        run: |
+          current_tag=$(git tag -l --format "%(refname:strip=2)" --sort=taggerdate | sed -n '$p')
+          last_tag=$(git tag -l --format "%(refname:strip=2)" --sort=taggerdate | sed -e '$d' | sed -n '$p')
+          git log --pretty=oneline --pretty=format:"%s%n%b" $last_tag...$current_tag > ${{ github.workspace }}-CHANGELOG.txt
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          body_path: ${{ github.workspace }}-CHANGELOG.txt
+          generate_release_notes: true
