@@ -4,7 +4,7 @@ ARG ALPINE_VERSION
 ARG GRPC_VERSION
 
 FROM ${REPO}/grpc-alpine:grpc-${GRPC_VERSION}-alpine-${ALPINE_VERSION}-devel as devel
-FROM alpine:${ALPINE_VERSION}
+FROM alpine:${ALPINE_VERSION} AS build
 
 # image info
 ARG AUTHOR_NAME

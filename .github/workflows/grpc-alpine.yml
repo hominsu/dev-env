@@ -1,4 +1,4 @@
-name: FFmpeg Alpine
+name: gRPC Alpine
 
 on:
   push:

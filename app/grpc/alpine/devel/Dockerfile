@@ -1,7 +1,10 @@
 # syntax=docker/dockerfile:1.4
+ARG REPO
 ARG ALPINE_VERSION
+ARG GRPC_VERSION
 
-FROM alpine:${ALPINE_VERSION} AS devel
+FROM ${REPO}/grpc-alpine:grpc-${GRPC_VERSION}-alpine-${ALPINE_VERSION}-deps as deps
+FROM alpine:${ALPINE_VERSION} AS build
 
 # image info
 ARG AUTHOR_NAME
@@ -13,6 +16,14 @@ ARG GRPC_VERSION
 # label
 LABEL author=${AUTHOR_NAME} email=${AUTHOR_EMAIL} version=${VERSION} alpine_version=${ALPINE_VERSION} grpc_version=${GRPC_VERSION}
 
+ARG PREFIX=/usr/local
+
+COPY --from=deps ${PREFIX}/bin ${PREFIX}/bin
+COPY --from=deps ${PREFIX}/lib ${PREFIX}/lib
+COPY --from=deps ${PREFIX}/share ${PREFIX}/share
+COPY --from=deps ${PREFIX}/include ${PREFIX}/include
+COPY --from=deps ${PREFIX}/ssl ${PREFIX}/ssl
+
 ENV GRPC_VERSION=${GRPC_VERSION}
 
 ENV BUILD_DEPS="autoconf \
@@ -20,6 +31,7 @@ ENV BUILD_DEPS="autoconf \
                 build-base \
                 cmake \
                 libtool \
+                pkgconf \
                 samurai"
 
 ENV RUNTIME_DEPS="bash \
@@ -28,29 +40,27 @@ ENV RUNTIME_DEPS="bash \
                     git \
                     linux-headers"
 
-ARG PREFIX=/usr/local
-
 RUN apk update &&  \
     apk add --no-cache --virtual .runtime-deps ${RUNTIME_DEPS} &&  \
     apk add --no-cache --virtual .build-deps ${BUILD_DEPS}
 
 RUN DIR=$(mktemp -d) && cd ${DIR} && \
-    git clone --recurse-submodules -b v${GRPC_VERSION} --depth 1 --shallow-submodules https://github.com/grpc/grpc ${DIR} &&  \
+    git clone -b v${GRPC_VERSION} --depth 1 https://github.com/grpc/grpc ${DIR} &&  \
     cmake -B build \
     -DCMAKE_BUILD_TYPE=MinSizeRel \
-    -DCMAKE_INSTALL_PREFIX=${PREFIX} \
+    -DCMAKE_INSTALL_PREFIX="${PREFIX}" \
     -DCMAKE_CXX_FLAGS="$CXXFLAGS -w" \
     -DCMAKE_C_FLAGS="$CFLAGS -w" \
     -DCMAKE_CXX_STANDARD=17 \
     -DBUILD_SHARED_LIBS=True \
     -DgRPC_INSTALL=ON \
-    -DgRPC_CARES_PROVIDER=module \
-    -DgRPC_PROTOBUF_PROVIDER=module \
-    -DgRPC_SSL_PROVIDER=module \
-    -DgRPC_ZLIB_PROVIDER=module \
-    -DgRPC_ABSL_PROVIDER=module \
-    -DgRPC_BENCHMARK_PROVIDER=module \
-    -DgRPC_RE2_PROVIDER=module \
+    -DgRPC_CARES_PROVIDER=package \
+    -DgRPC_PROTOBUF_PROVIDER=package \
+    -DgRPC_SSL_PROVIDER=package \
+    -DgRPC_ZLIB_PROVIDER=package \
+    -DgRPC_ABSL_PROVIDER=package \
+    -DgRPC_BENCHMARK_PROVIDER=package \
+    -DgRPC_RE2_PROVIDER=package \
     -DgRPC_BUILD_TESTS=OFF \
     -G Ninja && \
     cmake --build build --parallel && \
