@@ -32,17 +32,51 @@ ffmpeg-debian-push:
 	cd app/ffmpeg/debian && \
 	docker buildx bake --file docker-bake.hcl --push
 
+.PHONY: grpc-alpine
+# build grpc-alpine images for current platform via docker
+grpc-alpine:
+	find app/grpc/alpine -mindepth 1 -maxdepth 1 -type d -print | sort | xargs -L 1 bash -c 'cd "$$0" && pwd && $(MAKE) grpc-alpine'
+
+.PHONY: grpc-alpine-bake
+# build grpc-alpine images for multi-platform via buildx bake
+grpc-alpine-bake:
+	cd app/grpc/alpine && \
+	docker buildx bake --file docker-bake.hcl --load
+
+.PHONY: grpc-alpine-push
+# build grpc-alpine images for multi-platform via buildx bake and push to the container registry
+grpc-alpine-push:
+	cd app/grpc/alpine && \
+	docker buildx bake --file docker-bake.hcl --push
+
+.PHONY: grpc-debian
+# build grpc-debian images for current platform via docker
+grpc-debian:
+	find app/grpc/debian -mindepth 1 -maxdepth 1 -type d -print | sort | xargs -L 1 bash -c 'cd "$$0" && pwd && $(MAKE) grpc-debian'
+
+.PHONY: grpc-debian-bake
+# build grpc-debian images for multi-platform via buildx bake
+grpc-debian-bake:
+	cd app/grpc/debian && \
+	docker buildx bake --file docker-bake.hcl --load
+
+.PHONY: grpc-debian-push
+# build grpc-debian images for multi-platform via buildx bake and push to the container registry
+grpc-debian-push:
+	cd app/grpc/debian && \
+	docker buildx bake --file docker-bake.hcl --push
+
 .PHONY: all
 # build all images for current platform via docker
-all-docker: ffmpeg-alpine ffmpeg-debian
+all-docker: ffmpeg-alpine ffmpeg-debian grpc-alpine grpc-debian
 
 .PHONY: all-bake
 # build all images for multi-platform via buildx bake
-all-bake: ffmpeg-alpine-bake ffmpeg-debian-bake
+all-bake: ffmpeg-alpine-bake ffmpeg-debian-bake grpc-alpine-bake grpc-debian-bake
 
 .PHONY: all-push
 # build all images for multi-platform via buildx bake and push to the container registry
-all-push: ffmpeg-alpine-push ffmpeg-debian-push
+all-push: ffmpeg-alpine-push ffmpeg-debian-push grpc-alpine-push grpc-debian-push
 
 # show help
 help:
