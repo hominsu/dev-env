@@ -16,10 +16,12 @@ ARG GRPC_VERSION
 # label
 LABEL author=${AUTHOR_NAME} email=${AUTHOR_EMAIL} version=${VERSION} alpine_version=${ALPINE_VERSION} grpc_version=${GRPC_VERSION}
 
-COPY --from=devel /usr/local/bin /usr/local/bin
-COPY --from=devel /usr/local/share /usr/local/share
-COPY --from=devel /usr/local/include /usr/local/include
-COPY --from=devel /usr/local/lib /usr/local/lib
+ARG PREFIX=/usr/local
+
+COPY --from=devel ${PREFIX}/bin ${PREFIX}/bin
+COPY --from=devel ${PREFIX}/lib ${PREFIX}/lib
+COPY --from=devel ${PREFIX}/share ${PREFIX}/share
+COPY --from=devel ${PREFIX}/include ${PREFIX}/include
 
 ENV GRPC_CORE="musl \
                 libgcc \
