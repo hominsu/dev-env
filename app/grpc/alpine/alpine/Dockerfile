@@ -13,6 +13,8 @@ ARG GRPC_VERSION
 # label
 LABEL author=${AUTHOR_NAME} email=${AUTHOR_EMAIL} version=${VERSION} alpine_version=${ALPINE_VERSION} grpc_version=${GRPC_VERSION}
 
+ARG PREFIX=/usr/local
+
 ENV GRPC_VERSION=${GRPC_VERSION}
 
 ENV GRPC_CORE="abseil-cpp \
@@ -53,13 +55,12 @@ RUN apk update && \
     apk add --no-cache --virtual .runtime-deps ${RUNTIME_DEPS} && \
     apk add --no-cache ${GRPC_CORE} && \
     apk add --no-cache --virtual .build-deps ${BUILD_DEPS} && \
-    export SRC=/usr \
 	DIR=$(mktemp -d) && cd ${DIR} && \
     curl -sL https://github.com/grpc/grpc/archive/v${GRPC_VERSION}/grpc-v${GRPC_VERSION}.tar.gz | \
     tar -zx --strip-components=1 && \
 	cmake -B build \
     -DCMAKE_BUILD_TYPE=MinSizeRel \
-    -DCMAKE_INSTALL_PREFIX=${SRC} \
+    -DCMAKE_INSTALL_PREFIX=${PREFIX} \
     -DCMAKE_CXX_FLAGS="$CXXFLAGS -w" \
     -DCMAKE_C_FLAGS="$CFLAGS -w" \
     -DCMAKE_CXX_STANDARD=17 \
@@ -77,7 +78,7 @@ RUN apk update && \
     cmake --build build --parallel && \
     cmake --install build && \
     rm -rf ${DIR} && \
-    rm /usr/share/grpc/roots.pem && \
+    rm ${PREFIX}/share/grpc/roots.pem && \
     apk del .build-deps && \
     apk del .runtime-deps && \
     rm -rf /var/cache/apk/* && \

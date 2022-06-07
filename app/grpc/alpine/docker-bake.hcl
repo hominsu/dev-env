@@ -10,16 +10,16 @@ variable "AUTHOR_EMAIL" {
   default = "hominsu@foxmail.com"
 }
 
-variable "VERSION" {
-  default = "alpine-3.16"
-}
-
 variable "ALPINE_VERSION" {
   default = "3.16"
 }
 
 variable "GRPC_VERSION" {
   default = "1.46.3"
+}
+
+variable "VERSION" {
+  default = "grpc-${GRPC_VERSION}-alpine-${ALPINE_VERSION}"
 }
 
 group "default" {

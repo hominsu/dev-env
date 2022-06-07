@@ -1,20 +1,20 @@
 # syntax=docker/dockerfile:1.4
 ARG REPO
-ARG ALPINE_VERSION
+ARG DEBIAN_VERSION
 ARG GRPC_VERSION
 
-FROM ${REPO}/grpc-alpine:grpc-${GRPC_VERSION}-alpine-${ALPINE_VERSION}-deps as deps
-FROM alpine:${ALPINE_VERSION} AS build
+FROM ${REPO}/grpc-debian:grpc-${GRPC_VERSION}-${DEBIAN_VERSION}-deps as deps
+FROM debian:${DEBIAN_VERSION} AS build
 
 # image info
 ARG AUTHOR_NAME
 ARG AUTHOR_EMAIL
 ARG VERSION
-ARG ALPINE_VERSION
+ARG DEBIAN_VERSION
 ARG GRPC_VERSION
 
 # label
-LABEL author=${AUTHOR_NAME} email=${AUTHOR_EMAIL} version=${VERSION} alpine_version=${ALPINE_VERSION} grpc_version=${GRPC_VERSION}
+LABEL author=${AUTHOR_NAME} email=${AUTHOR_EMAIL} version=${VERSION} debian_version=${DEBIAN_VERSION} grpc_version=${GRPC_VERSION}
 
 ARG PREFIX=/usr/local
 
@@ -26,23 +26,22 @@ COPY --from=deps ${PREFIX}/ssl ${PREFIX}/ssl
 
 ENV GRPC_VERSION=${GRPC_VERSION}
 
-ENV BUILD_DEPS="autoconf \
-                automake \
-                build-base \
-                cmake \
-                libtool \
-                pkgconf \
-                samurai"
+ENV BUILD_DEPS="autoconf        \
+                automake        \
+                build-essential \
+                ca-certificates \
+                cmake           \
+                git             \
+                libtool         \
+                netbase         \
+                ninja-build     \
+                pkg-config"
 
-ENV RUNTIME_DEPS="bash \
-                    ca-certificates \
-                    coreutils \
-                    git \
-                    linux-headers"
-
-RUN apk update &&  \
-    apk add --no-cache --virtual .runtime-deps ${RUNTIME_DEPS} &&  \
-    apk add --no-cache --virtual .build-deps ${BUILD_DEPS}
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ${BUILD_DEPS} && \
+    rm -rf /var/lib/apt/lists/ && \
+    apt-get autoremove -y && \
+    apt-get autoclean -y
 
 RUN DIR=$(mktemp -d) && cd ${DIR} && \
     git clone -b v${GRPC_VERSION} --depth 1 https://github.com/grpc/grpc ${DIR} &&  \
@@ -65,10 +64,6 @@ RUN DIR=$(mktemp -d) && cd ${DIR} && \
     -G Ninja && \
     cmake --build build --parallel && \
     cmake --install build && \
-    rm ${PREFIX}/share/grpc/roots.pem && \
+    rm -rf ${PREFIX}/share/grpc/roots.pem && \
     rm -rf ${DIR}
 
-RUN apk del .build-deps &&  \
-    apk del .runtime-deps &&  \
-    rm -rf /var/cache/apk/* &&  \
-    hash -r
