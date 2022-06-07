@@ -10,16 +10,16 @@ variable "AUTHOR_EMAIL" {
   default = "hominsu@foxmail.com"
 }
 
-variable "VERSION" {
-  default = "alpine-3.15"
-}
-
 variable "ALPINE_VERSION" {
   default = "3.15"
 }
 
 variable "FFMPEG_VERSION" {
   default = "5.0.1"
+}
+
+variable "VERSION" {
+  default = "ffmpeg-${FFMPEG_VERSION}-alpine-${ALPINE_VERSION}"
 }
 
 group "default" {
