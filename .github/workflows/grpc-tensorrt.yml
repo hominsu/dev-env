@@ -1,0 +1,103 @@
+name: gRPC TensorRT
+
+on:
+  push:
+    tags: [ 'grpc-tensorrt-v*.*.*' ]
+    paths:
+      - 'app/grpc/tensorrt'
+
+jobs:
+  set-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      git_tag: ${{ steps.git_info.outputs.tag }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - id: set-matrix
+        run: |
+          JSON=$(cat .github/workflows/repo-setting.json | tr '\n' ' ' | sed 's/ //g')
+          echo "::set-output name=matrix::$JSON"
+
+      - id: git_info
+        run: |
+          tag=$(echo ${{ github.ref }} | rev | cut -d/ -f1 | rev)
+          echo "::set-output name=tag::$tag"
+
+  build-grpc-tensorrt:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app/grpc/tensorrt
+    needs: [ set-matrix ]
+    strategy:
+      matrix:
+        platforms: [ amd64, arm64 ]
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Log into registry Docker
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_ID }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Log into registry Ghcr
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set Up QEMU
+        id: qemu
+        uses: docker/setup-qemu-action@v2
+        with:
+          image: tonistiigi/binfmt:latest
+          platforms: all
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          install: true
+
+      - name: Build ${{ matrix.platforms }}
+        run: |
+          platform=$(o=linux && p=${{ matrix.platforms }} && echo \*.platform=$o/$p)
+          REPO=hominsu VERSION=${{ needs.set-matrix.outputs.git_tag }} docker buildx bake --file docker-bake.hcl --push
+          REPO=ghcr.io/hominsu VERSION=${{ needs.set-matrix.outputs.git_tag }} docker buildx bake --file docker-bake.hcl --push
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: [ set-matrix, build-grpc-tensorrt ]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Generate Changelog
+        run: |
+          current_tag=$(git tag -l --format "%(refname:strip=2)" --sort=taggerdate | sed -n '$p')
+          last_tag=$(git tag -l --format "%(refname:strip=2)" --sort=taggerdate | sed -e '$d' | sed -n '$p')
+          git log --pretty=oneline --pretty=format:"%s%n%b" $last_tag...$current_tag > ${{ github.workspace }}-CHANGELOG.txt
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          body_path: ${{ github.workspace }}-CHANGELOG.txt
+          generate_release_notes: true
